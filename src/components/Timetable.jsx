@@ -1,101 +1,184 @@
-import { useState, useEffect } from 'react';
-import { Card, Table, Text, Loader, Container, Badge } from '@mantine/core';
+import { useState, useEffect, useMemo } from 'react';
+import { Card, Text, Loader, Container, ActionIcon, Group, Badge } from '@mantine/core';
+import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
+import {
+  DAY_ORDER,
+  LECTURE_TIMES,
+  parseScheduleCsv,
+  getCurrentWeekType,
+  getTodayDayCode,
+} from '../lib/scheduleSerializer.js';
+import './Timetable.css';
 
-const PUB_ID = '2PACX-1vRSIJwnvklsU8oP6GROruCJvfCSy_duAmcGwJ0uwHj5e7X69EAJTU49QUW-ndqeLA2gkhhL2i0Xfcph'
+const PUB_ID = '2PACX-1vRSIJwnvklsU8oP6GROruCJvfCSy_duAmcGwJ0uwHj5e7X69EAJTU49QUW-ndqeLA2gkhhL2i0Xfcph';
 const LIST = {
-    discipline: 0,
-    test: 1545959544,
-    schedule: 1227335714,
-}
+  discipline: 0,
+  test: 1545959544,
+  schedule: 1227335714,
+};
 
 const URL = `https://docs.google.com/spreadsheets/d/e/${PUB_ID}/pub?gid=${LIST.schedule}&output=csv`;
 
+const DAY_LABELS = {
+  пн: 'Пн',
+  вт: 'Вт',
+  ср: 'Ср',
+  чт: 'Чт',
+  пт: 'Пт',
+  сб: 'Сб',
+};
+
+const TYPE_COLORS = {
+  лекция: 'blue',
+  практика: 'green',
+  практ: 'green',
+  семинар: 'teal',
+  лабораторная: 'orange',
+  экзамен: 'red',
+};
+
+function getTypeBadge(type) {
+  if (!type) return null;
+  const color = TYPE_COLORS[type.toLowerCase()] ?? 'gray';
+  return (
+    <Badge size="xs" color={color} variant="light" className="typeBadge">
+      {type}
+    </Badge>
+  );
+}
+
 export default function Timetable() {
-    const [schedule, setSchedule] = useState([]);
-    const [loading, setLoading] = useState(true);
+  const [schedule, setSchedule] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        fetch(URL)
-            .then(res => res.text()) // Получаем CSV как обычный текст
-            .then(csvText => {
-                console.log(csvText)
+  // По умолчанию — текущая неделя и текущий день.
+  const [week, setWeek] = useState(() => getCurrentWeekType());
+  const [selectedDay, setSelectedDay] = useState(() => getTodayDayCode());
+  const todayDay = useMemo(() => getTodayDayCode(), []);
 
-                // Разбиваем текст на строки
-                const lines = csvText.split('\n');
-
-
-                // Первая строчка — заголовки (id, title...), пропускаем её через slice(1)
-                const formattedData = lines.slice(1).map(line => {
-                    // Разбиваем каждую строку по запятой
-                    const columns = line.split(',');
-
-                    return {
-                        id: columns[0]?.trim(),      // Столбец A
-                        title: columns[1]?.trim(),   // Столбец B
-                        teacher: columns[2]?.trim(), // Столбец C
-                        type: columns[3]?.trim()     // Столбец D
-                    };
-                }).filter(item => item.id); // Убираем пустые строки, если они есть в конце
-
-                setSchedule(formattedData);
-                setLoading(false);
-            })
-            .catch(err => {
-                console.error("Ошибка загрузки CSV:", err);
-                setLoading(false);
-            });
-    }, []);
-
-    if (loading) return <Container size="md" pt="xl"><Loader color="blue" size="xl" /></Container>;
-
-    // Преобразуем тип занятий в бейджи с разными цветами
-    const getTypeBadge = (type) => {
-        switch (type?.toLowerCase()) {
-            case 'лекция':
-                return <Badge color="blue">Лекция</Badge>;
-            case 'практика':
-                return <Badge color="green">Практика</Badge>;
-            case 'лабораторная':
-                return <Badge color="orange">Лабораторная</Badge>;
-            case 'экзамен':
-                return <Badge color="red">Экзамен</Badge>;
-            default:
-                return <Badge variant="outline">{type}</Badge>;
-        }
+  useEffect(() => {
+    let cancelled = false;
+    fetch(URL)
+      .then((res) => res.text())
+      .then((csvText) => {
+        if (cancelled) return;
+        setSchedule(parseScheduleCsv(csvText));
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Ошибка загрузки CSV:', err);
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
     };
+  }, []);
 
+  // Записи текущей недели, сгруппированные по дню и номеру пары.
+  const weekDayMap = useMemo(() => {
+    const map = Object.fromEntries(DAY_ORDER.map((d) => [d, {}]));
+    schedule.forEach((item) => {
+      if (item.week !== week) return;
+      if (!map[item.day]) return;
+      map[item.day][item.lectureNumber] = item;
+    });
+    return map;
+  }, [schedule, week]);
+
+  const toggleWeek = () => setWeek((w) => (w === 'upper' ? 'lower' : 'upper'));
+  const isUpper = week === 'upper';
+
+  if (loading) {
     return (
-        <Container size="md" mt="md">
-            <Card shadow="lg" withBorder radius="md" p="md">
-                <Table striped highlightOnHover withColumnBorders>
-                    <Table.Thead>
-                        <Table.Tr>
-                            <Table.Th>ID</Table.Th>
-                            <Table.Th>Предмет</Table.Th>
-                            <Table.Th>Преподаватель</Table.Th>
-                            <Table.Th style={{ textAlign: 'center' }}>Тип занятия</Table.Th>
-                        </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>
-                        {schedule.map((item, index) => (
-                            <Table.Tr key={item.id || index}>
-                                <Table.Td>
-                                    <Text size="sm" fw={500}>{item.id}</Text>
-                                </Table.Td>
-                                <Table.Td>
-                                    <Text fw={600}>{item.title}</Text>
-                                </Table.Td>
-                                <Table.Td>
-                                    <Text>{item.teacher}</Text>
-                                </Table.Td>
-                                <Table.Td style={{ textAlign: 'center' }}>
-                                    {item.type ? getTypeBadge(item.type) : '--'}
-                                </Table.Td>
-                            </Table.Tr>
-                        ))}
-                    </Table.Tbody>
-                </Table>
-            </Card>
-        </Container>
+      <Container size="md" pt="xl">
+        <Loader color="blue" size="xl" />
+      </Container>
     );
+  }
+
+  return (
+    <Container size="md" mt="md" px="xs">
+      <Card shadow="lg" withBorder radius="md" p="sm">
+        {/* Переключатель недели */}
+        <Group justify="center" gap={6} className="weekToggle" mb="xs">
+          <ActionIcon variant="light" aria-label="Предыдущая неделя" onClick={toggleWeek}>
+            <IconChevronLeft size={20} />
+          </ActionIcon>
+          <Text fw={700} size="md" className="weekName">
+            {isUpper ? 'Верхняя неделя' : 'Нижняя неделя'}
+          </Text>
+          <ActionIcon variant="light" aria-label="Следующая неделя" onClick={toggleWeek}>
+            <IconChevronRight size={20} />
+          </ActionIcon>
+        </Group>
+
+        {/* Выбор дня недели; сегодняшний день подсвечен отдельно */}
+        <Group gap={6} mb="sm" className="dayBar">
+          {DAY_ORDER.map((day) => {
+            const isToday = day === todayDay;
+            const isSelected = day === selectedDay;
+            return (
+              <button
+                key={day}
+                type="button"
+                className="dayChip"
+                style={{
+                  backgroundColor: isSelected
+                    ? 'var(--mantine-color-blue-filled)'
+                    : 'var(--mantine-color-default-hover)',
+                  color: isSelected ? 'var(--mantine-color-white)' : 'var(--mantine-color-text)',
+                  borderColor: isToday ? 'var(--mantine-color-teal-filled)' : 'transparent',
+                  boxShadow: isToday ? 'inset 0 0 0 1px var(--mantine-color-teal-filled)' : 'none',
+                }}
+                onClick={() => setSelectedDay(day)}
+                aria-pressed={isSelected}
+              >
+                {DAY_LABELS[day]}
+              </button>
+            );
+          })}
+        </Group>
+
+        {/* Таблица расписания на выбранный день */}
+        <table className="scheduleTable">
+          <thead>
+            <tr>
+              <th className="colNum">№</th>
+              <th className="colTime">Время</th>
+              <th>Дисциплина</th>
+              <th className="colAud">Аудитория</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: 6 }, (_, i) => {
+              const number = i + 1;
+              const entry = weekDayMap[selectedDay][number];
+              return (
+                <tr key={number}>
+                  <td className="colNum">{number}</td>
+                  <td className="colTime">{LECTURE_TIMES[number]}</td>
+                  <td>
+                    {entry?.discipline ? (
+                      <>
+                        <div className="subjectName">
+                          {entry.discipline}
+                          {getTypeBadge(entry.type)}
+                        </div>
+                        {entry.teacher && <div className="subjectTeacher">{entry.teacher}</div>}
+                      </>
+                    ) : (
+                      <Text size="sm" c="dimmed">
+                        —
+                      </Text>
+                    )}
+                  </td>
+                  <td className="colAud">{entry?.audience ? entry.audience : ''}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </Card>
+    </Container>
+  );
 }

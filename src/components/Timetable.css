@@ -1,0 +1,106 @@
+.weekToggle {
+  /* ровная, стабильная по высоте кнопка с названием недели */
+}
+
+.weekName {
+  min-width: 120px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.dayBar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.dayChip {
+  flex: 1 1 auto;
+  min-width: 44px;
+  border-radius: var(--mantine-radius-md);
+  padding: 6px 4px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.scheduleTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.scheduleTable th,
+.scheduleTable td {
+  border-bottom: 1px solid var(--mantine-color-default-border);
+  padding: 8px 6px;
+  vertical-align: top;
+  text-align: left;
+}
+
+.scheduleTable .colNum {
+  width: 34px;
+  text-align: center;
+  color: var(--mantine-color-dimmed);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.scheduleTable .colTime {
+  width: 92px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--mantine-color-dimmed);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.scheduleTable .colAud {
+  width: 78px;
+  white-space: nowrap;
+  color: var(--mantine-color-dimmed);
+}
+
+.subjectName {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.subjectTeacher {
+  font-size: 11px;
+  color: var(--mantine-color-dimmed);
+  margin-top: 2px;
+}
+
+.typeBadge {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+@media (max-width: 420px) {
+  .scheduleTable .colTime {
+    width: 78px;
+    font-size: 11px;
+  }
+  .scheduleTable .colAud {
+    width: 66px;
+    font-size: 11px;
+  }
+  .subjectName {
+    font-size: 12px;
+  }
+  .subjectTeacher {
+    font-size: 10px;
+  }
+}
