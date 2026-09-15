@@ -1,26 +1,21 @@
 import { ActionIcon, Menu, useMantineColorScheme } from '@mantine/core';
-import { IconSun, IconMoon, IconDeviceLaptop, IconCheck } from '@tabler/icons-react';
-import { useColorScheme } from '@mantine/hooks';
+import { IconSun, IconMoon, IconDeviceLaptop, IconCheck, IconSettings } from '@tabler/icons-react';
 
 export default function ThemeMenu() {
   // Mantine — единственный источник правды. defaultColorScheme="auto" в MantineProvider
   // заставляет приложение следовать системной теме, выбор в меню переключает явно.
   const { colorScheme, setColorScheme } = useMantineColorScheme();
-  // При colorScheme === 'auto' хук возвращает 'auto' (сырую схему), а не резолвнутую,
-  // поэтому для отображения берём системную тему отдельно.
-  const osColorScheme = useColorScheme('light', { getInitialValueInEffect: false });
-  const isDark = colorScheme === 'auto' ? osColorScheme === 'dark' : colorScheme === 'dark';
 
   return (
     <Menu shadow="md" width={200}>
       <Menu.Target>
         <ActionIcon
           size="xl"
-          color={isDark ? 'yellow' : 'blue'}
+          color="blue"
           variant="filled"
           aria-label="Выбор темы"
         >
-          {isDark ? <IconSun size={20} /> : <IconMoon size={20} />}
+          <IconSettings size={20} />
         </ActionIcon>
       </Menu.Target>
       <Menu.Dropdown>
