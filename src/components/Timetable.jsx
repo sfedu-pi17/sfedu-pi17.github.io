@@ -8,13 +8,13 @@ import {
   getCurrentWeekType,
   getTodayDayCode,
   getCurrentLectureNumber,
+  loadScheduleCache,
+  saveScheduleCache,
 } from '../lib/scheduleSerializer.js';
 import './Timetable.css';
 
 const PUB_ID = '2PACX-1vRSIJwnvklsU8oP6GROruCJvfCSy_duAmcGwJ0uwHj5e7X69EAJTU49QUW-ndqeLA2gkhhL2i0Xfcph';
 const LIST = {
-  discipline: 0,
-  test: 1545959544,
   schedule: 1227335714,
 };
 
@@ -30,8 +30,10 @@ const DAY_LABELS = {
 };
 
 export default function Timetable() {
-  const [schedule, setSchedule] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [schedule, setSchedule] = useState(() => loadScheduleCache());
+  // Лоадер виден только когда нет сохранённого кэша; иначе сразу показываем кэш,
+  // а свежие данные догружаем в фоне без индикатора загрузки.
+  const [loading, setLoading] = useState(schedule.length === 0);
 
   // По умолчанию — текущая неделя и текущий день.
   const [week, setWeek] = useState(() => getCurrentWeekType());
@@ -53,14 +55,14 @@ export default function Timetable() {
   const currentLecture = isTodayView ? getCurrentLectureNumber(now) : null;
 
   useEffect(() => {
-      console.log(123)
     let cancelled = false;
     fetch(URL)
       .then((res) => res.text())
       .then((csvText) => {
-        console.log(csvText)
         if (cancelled) return;
-        setSchedule(parseScheduleCsv(csvText));
+        const data = parseScheduleCsv(csvText);
+        saveScheduleCache(data);
+        setSchedule(data);
         setLoading(false);
       })
       .catch((err) => {

@@ -141,6 +141,27 @@ export function getTodayDayCode(date = new Date()) {
   return DAY_ORDER.includes(code) ? code : 'пн';
 }
 
+// Кэш расписания в localStorage: при открытии страницы сначала показываем сохранённые
+// данные, а свежие подтягиваем асинхронно в фоне.
+const STORAGE_KEY = 'sfedu.schedule';
+
+export function loadScheduleCache() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveScheduleCache(schedule) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(schedule));
+  } catch {
+    // приватный режим / переполнение хранилища — игнорируем
+  }
+}
+
 // Номер пары, которая идёт прямо сейчас (если текущее время попадает в её диапазон),
 // иначе null.
 export function getCurrentLectureNumber(date = new Date()) {
