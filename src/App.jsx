@@ -9,9 +9,10 @@ import {
   Container,
   Title,
   ActionIcon,
+  Menu,
   useMantineColorScheme,
 } from '@mantine/core';
-import { IconSun, IconMoon } from '@tabler/icons-react';
+import { IconSun, IconMoon, IconDeviceLaptop, IconCheck } from '@tabler/icons-react';
 import { useColorScheme } from '@mantine/hooks';
 import '@mantine/core/styles.css';
 
@@ -27,7 +28,7 @@ const URL = `https://docs.google.com/spreadsheets/d/e/${PUB_ID}/pub?gid=${LIST.s
 export default function App() {
   // Mantine — единственный источник правды. defaultColorScheme="auto" в MantineProvider
   // заставляет приложение следовать системной теме, toggle переключает явно.
-  const { colorScheme, toggleColorScheme } = useMantineColorScheme();
+  const { colorScheme, setColorScheme } = useMantineColorScheme();
   // При colorScheme === 'auto' хук возвращает 'auto' (сырую схему), а не резолвнутую,
   // поэтому для отображения берём системную тему отдельно.
   const osColorScheme = useColorScheme('light', { getInitialValueInEffect: false });
@@ -40,19 +41,46 @@ export default function App() {
           <Title order={2}>
             Расписание занятий
           </Title>
-          <Badge variant="filled" color="blue">
-            {isDark ? 'Темная' : 'Светлая'} тема
-          </Badge>
         </Group>
-        <ActionIcon
-          size="xl"
-          color={isDark ? 'yellow' : 'blue'}
-          variant="filled"
-          onClick={toggleColorScheme}
-          title={isDark ? 'Переключить на светлую тему' : 'Переключить на темную тему'}
-        >
-          {isDark ? <IconSun size={20} /> : <IconMoon size={20} />}
-        </ActionIcon>
+        <Menu shadow="md" width={200}>
+          <Menu.Target>
+            <ActionIcon
+              size="xl"
+              color={isDark ? 'yellow' : 'blue'}
+              variant="filled"
+              aria-label="Выбор темы"
+            >
+              {isDark ? <IconSun size={20} /> : <IconMoon size={20} />}
+            </ActionIcon>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Label>Тема оформления</Menu.Label>
+            <Menu.Item
+              leftSection={<IconDeviceLaptop size={14} />}
+              rightSection={colorScheme === 'auto' ? <IconCheck size={14} /> : null}
+              color={colorScheme === 'auto' ? 'blue' : undefined}
+              onClick={() => setColorScheme('auto')}
+            >
+              Системная
+            </Menu.Item>
+            <Menu.Item
+              leftSection={<IconSun size={14} />}
+              rightSection={colorScheme === 'light' ? <IconCheck size={14} /> : null}
+              color={colorScheme === 'light' ? 'blue' : undefined}
+              onClick={() => setColorScheme('light')}
+            >
+              Светлая
+            </Menu.Item>
+            <Menu.Item
+              leftSection={<IconMoon size={14} />}
+              rightSection={colorScheme === 'dark' ? <IconCheck size={14} /> : null}
+              color={colorScheme === 'dark' ? 'blue' : undefined}
+              onClick={() => setColorScheme('dark')}
+            >
+              Темная
+            </Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
       </Group>
       <Timetable />
     </div>
