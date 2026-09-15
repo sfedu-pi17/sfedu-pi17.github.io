@@ -12,6 +12,7 @@ import {
   useMantineColorScheme,
 } from '@mantine/core';
 import { IconSun, IconMoon } from '@tabler/icons-react';
+import { useColorScheme } from '@mantine/hooks';
 import '@mantine/core/styles.css';
 
 const PUB_ID = '2PACX-1vRSIJwnvklsU8oP6GROruCJvfCSy_duAmcGwJ0uwHj5e7X69EAJTU49QUW-ndqeLA2gkhhL2i0Xfcph'
@@ -24,42 +25,13 @@ const LIST = {
 const URL = `https://docs.google.com/spreadsheets/d/e/${PUB_ID}/pub?gid=${LIST.schedule}&output=csv`;
 
 export default function App() {
-  const [colorScheme, setColorScheme] = useState(() => {
-    // Проверяем системную тему при загрузке
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    return 'light';
-  });
-  const { toggleColorScheme: toggleMantineColorScheme } = useMantineColorScheme();
-
-  const toggleColorScheme = () => {
-    const newScheme = colorScheme === 'light' ? 'dark' : 'light';
-    setColorScheme(newScheme);
-    toggleMantineColorScheme();
-  };
-
-  // Настраиваем CSS переменные для Mantine при изменении темы
-  useEffect(() => {
-    document.documentElement.setAttribute('data-mantine-color-scheme', colorScheme);
-  }, [colorScheme]);
-
-  // Следим за изменением системной темы
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e) => {
-      if (e.matches) {
-        setColorScheme('dark');
-      } else {
-        setColorScheme('light');
-      }
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
+  // Mantine — единственный источник правды. defaultColorScheme="auto" в MantineProvider
+  // заставляет приложение следовать системной теме, toggle переключает явно.
+  const { colorScheme, toggleColorScheme } = useMantineColorScheme();
+  // При colorScheme === 'auto' хук возвращает 'auto' (сырую схему), а не резолвнутую,
+  // поэтому для отображения берём системную тему отдельно.
+  const osColorScheme = useColorScheme('light', { getInitialValueInEffect: false });
+  const isDark = colorScheme === 'auto' ? osColorScheme === 'dark' : colorScheme === 'dark';
 
   return (
     <div>
@@ -69,18 +41,17 @@ export default function App() {
             Расписание занятий
           </Title>
           <Badge variant="filled" color="blue">
-              {colorScheme} -
-            {colorScheme === 'dark' ? 'Темная' : 'Светлая'} тема
+            {isDark ? 'Темная' : 'Светлая'} тема
           </Badge>
         </Group>
         <ActionIcon
           size="xl"
-          color={colorScheme === 'dark' ? 'yellow' : 'blue'}
+          color={isDark ? 'yellow' : 'blue'}
           variant="filled"
           onClick={toggleColorScheme}
-          title={colorScheme === 'dark' ? 'Переключить на светлую тему' : 'Переключить на темную тему'}
+          title={isDark ? 'Переключить на светлую тему' : 'Переключить на темную тему'}
         >
-          {colorScheme === 'dark' ? <IconSun size={20} /> : <IconMoon size={20} />}
+          {isDark ? <IconSun size={20} /> : <IconMoon size={20} />}
         </ActionIcon>
       </Group>
       <Timetable />
