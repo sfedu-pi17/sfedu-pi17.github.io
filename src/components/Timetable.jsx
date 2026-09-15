@@ -7,6 +7,7 @@ import {
   parseScheduleCsv,
   getCurrentWeekType,
   getTodayDayCode,
+  getCurrentLectureNumber,
 } from '../lib/scheduleSerializer.js';
 import './Timetable.css';
 
@@ -39,6 +40,17 @@ export default function Timetable() {
   const currentWeek = useMemo(() => getCurrentWeekType(), []);
   // Зелёная обводка дня недели актуальна только когда показана текущая неделя.
   const isCurrentWeek = week === currentWeek;
+
+  // Текущее время: обновляем, чтобы метка текущей пары не устаревала.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Текущая пара имеет смысл только для сегодняшнего дня в текущей неделе.
+  const isTodayView = isCurrentWeek && selectedDay === todayDay;
+  const currentLecture = isTodayView ? getCurrentLectureNumber(now) : null;
 
   useEffect(() => {
       console.log(123)
@@ -157,7 +169,10 @@ export default function Timetable() {
               const number = i + 1;
               const entry = weekDayMap[selectedDay][number];
               return (
-                <tr key={number}>
+                <tr
+                  key={number}
+                  className={number === currentLecture ? 'currentLecture' : undefined}
+                >
                   <td className="colNum">{number}</td>
                   <td className="colTime">{LECTURE_TIMES[number]}</td>
                   <td>

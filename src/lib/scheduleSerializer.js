@@ -140,3 +140,18 @@ export function getTodayDayCode(date = new Date()) {
   const code = map[date.getDay()];
   return DAY_ORDER.includes(code) ? code : 'пн';
 }
+
+// Номер пары, которая идёт прямо сейчас (если текущее время попадает в её диапазон),
+// иначе null.
+export function getCurrentLectureNumber(date = new Date()) {
+  const mins = date.getHours() * 60 + date.getMinutes();
+  const ranges = Object.entries(LECTURE_TIMES).map(([num, span]) => {
+    const [start, end] = span.split('-').map((part) => {
+      const [h, m] = part.trim().split(':').map(Number);
+      return h * 60 + m;
+    });
+    return { num: Number(num), start, end };
+  });
+  const found = ranges.find((r) => mins >= r.start && mins < r.end);
+  return found ? found.num : null;
+}
