@@ -31,10 +31,8 @@ const DAY_LABELS = {
 
 export default function Timetable() {
   const [schedule, setSchedule] = useState(() => loadScheduleCache());
-  // Лоадер виден только когда нет сохранённого кэша; иначе сразу показываем кэш,
-  // а свежие данные догружаем в фоне без индикатора загрузки.
-  const [loading, setLoading] = useState(schedule.length === 0);
-  // Фоновая догрузка свежих данных: показывает компактный индикатор в хэдере, не блокируя интерфейс.
+  // Догрузка свежих данных: показывает компактный индикатор (тост), не блокируя интерфейс.
+  // Сначала true (первая загрузка), сбрасывается после ответа.
   const [refreshing, setRefreshing] = useState(true);
   // Ошибка загрузки — показываем уведомление.
   const [error, setError] = useState(false);
@@ -76,7 +74,6 @@ export default function Timetable() {
         const data = parseScheduleCsv(csvText);
         saveScheduleCache(data);
         setSchedule(data);
-        setLoading(false);
         setRefreshing(false);
         setError(false);
         setToastVisible(false);
@@ -84,7 +81,6 @@ export default function Timetable() {
       .catch((err) => {
         console.error('Ошибка загрузки CSV:', err);
         if (!cancelled) {
-          setLoading(false);
           setRefreshing(false);
           setError(true);
           setToastVisible(true);
@@ -114,14 +110,6 @@ export default function Timetable() {
     setWeek(getCurrentWeekType());
     setSelectedDay(getTodayDayCode());
   };
-
-  if (loading) {
-    return (
-      <Container size="md" pt="xl">
-        <Loader color="blue" size="xl" />
-      </Container>
-    );
-  }
 
   // Нет ни кэша, ни свежих данных и произошла ошибка — показываем сообщение о сбое.
   if (!schedule.length && error) {
