@@ -73,6 +73,16 @@
   user-select: none;
 }
 
+/* Уведомление «есть изменения» */
+.changesBanner {
+  border: 1px solid var(--mantine-color-yellow-4);
+  background: var(--mantine-color-yellow-light);
+  color: var(--mantine-color-yellow-light-color);
+  padding: 8px 12px;
+  border-radius: var(--mantine-radius-md);
+  margin-bottom: var(--mantine-spacing-sm);
+}
+
 .scheduleTable {
   width: 100%;
   border-collapse: collapse;
@@ -132,6 +142,27 @@
 
 .scheduleTable tr.currentLecture td.colNum {
   box-shadow: inset 3px 0 0 var(--mantine-primary-color-filled);
+}
+
+/* Изменившаяся пара — жёлтая подсветка (перекрывает текущую пару) */
+.scheduleTable tr.changedPair td {
+  background-color: var(--mantine-color-yellow-light);
+}
+
+.scheduleTable tr.changedPair td.colNum {
+  box-shadow: inset 3px 0 0 var(--mantine-color-yellow-7);
+}
+
+/* Diff внутри пары: красное — удалено, зелёное — появилось */
+.diffOld {
+  color: var(--mantine-color-red-6);
+  text-decoration: line-through;
+  margin-right: 4px;
+}
+
+.diffNew {
+  color: var(--mantine-color-green-6);
+  font-weight: 600;
 }
 
 .formatText {

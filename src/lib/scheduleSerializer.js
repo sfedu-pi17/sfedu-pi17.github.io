@@ -176,3 +176,42 @@ export function getCurrentLectureNumber(date = new Date()) {
   const found = ranges.find((r) => mins >= r.start && mins < r.end);
   return found ? found.num : null;
 }
+
+// Сравнивает две записи пары по всем содержательным полям.
+function entriesEqual(a, b) {
+  if (!a || !b) return a === b;
+  return (
+    a.discipline === b.discipline &&
+    a.format === b.format &&
+    a.teacher === b.teacher &&
+    a.audience === b.audience &&
+    a.subgroup === b.subgroup &&
+    a.week === b.week &&
+    a.day === b.day &&
+    a.lectureNumber === b.lectureNumber
+  );
+}
+
+// Возвращает diff между старым и новым расписанием в виде
+// { [week]: { [day]: { [lectureNumber]: { old, new } } } } — только изменившиеся пары.
+// old / new могут быть null (пара добавлена или удалена).
+export function diffSchedule(oldList, newList) {
+  if (!oldList.length) return {}; // старых данных нет — нечего сравнивать
+
+  const newMap = new Map(newList.map((e) => [`${e.week}|${e.day}|${e.lectureNumber}`, e]));
+  const oldMap = new Map(oldList.map((e) => [`${e.week}|${e.day}|${e.lectureNumber}`, e]));
+  const keys = new Set([...oldMap.keys(), ...newMap.keys()]);
+
+  const result = {};
+  for (const key of keys) {
+    const oldEntry = oldMap.get(key);
+    const newEntry = newMap.get(key);
+    if (entriesEqual(oldEntry, newEntry)) continue;
+
+    const [week, day, num] = key.split('|');
+    result[week] ||= {};
+    result[week][day] ||= {};
+    result[week][day][Number(num)] = { old: oldEntry || null, new: newEntry || null };
+  }
+  return result;
+}
