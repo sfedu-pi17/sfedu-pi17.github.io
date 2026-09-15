@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, Text, Loader, Container, ActionIcon, Group, Button } from '@mantine/core';
-import { IconChevronLeft, IconChevronRight, IconCalendar } from '@tabler/icons-react';
+import { IconChevronLeft, IconChevronRight, IconCalendar, IconAlertCircle } from '@tabler/icons-react';
 import {
   DAY_ORDER,
   LECTURE_TIMES,
@@ -10,7 +10,7 @@ import {
   getCurrentLectureNumber,
   loadScheduleCache,
   saveScheduleCache,
-} from '../lib/scheduleSerializer.js';
+} from '../../lib/scheduleSerializer.js';
 import './Timetable.css';
 
 const PUB_ID = '2PACX-1vRSIJwnvklsU8oP6GROruCJvfCSy_duAmcGwJ0uwHj5e7X69EAJTU49QUW-ndqeLA2gkhhL2i0Xfcph';
@@ -34,6 +34,12 @@ export default function Timetable() {
   // Лоадер виден только когда нет сохранённого кэша; иначе сразу показываем кэш,
   // а свежие данные догружаем в фоне без индикатора загрузки.
   const [loading, setLoading] = useState(schedule.length === 0);
+  // Фоновая догрузка свежих данных: показывает компактный индикатор в хэдере, не блокируя интерфейс.
+  const [refreshing, setRefreshing] = useState(true);
+  // Ошибка загрузки — показываем уведомление.
+  const [error, setError] = useState(false);
+  // Тост об ошибке автоматически скрывается через 10 секунд.
+  const [toastVisible, setToastVisible] = useState(false);
 
   // По умолчанию — текущая неделя и текущий день.
   const [week, setWeek] = useState(() => getCurrentWeekType());
@@ -50,6 +56,13 @@ export default function Timetable() {
     return () => clearInterval(id);
   }, []);
 
+  // Автоскрытие тоста об ошибке через 10 секунд.
+  useEffect(() => {
+    if (!toastVisible) return;
+    const id = setTimeout(() => setToastVisible(false), 10_000);
+    return () => clearTimeout(id);
+  }, [toastVisible]);
+
   // Текущая пара имеет смысл только для сегодняшнего дня в текущей неделе.
   const isTodayView = isCurrentWeek && selectedDay === todayDay;
   const currentLecture = isTodayView ? getCurrentLectureNumber(now) : null;
@@ -64,10 +77,18 @@ export default function Timetable() {
         saveScheduleCache(data);
         setSchedule(data);
         setLoading(false);
+        setRefreshing(false);
+        setError(false);
+        setToastVisible(false);
       })
       .catch((err) => {
         console.error('Ошибка загрузки CSV:', err);
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setRefreshing(false);
+          setError(true);
+          setToastVisible(true);
+        }
       });
     return () => {
       cancelled = true;
@@ -98,6 +119,25 @@ export default function Timetable() {
     return (
       <Container size="md" pt="xl">
         <Loader color="blue" size="xl" />
+      </Container>
+    );
+  }
+
+  // Нет ни кэша, ни свежих данных и произошла ошибка — показываем сообщение о сбое.
+  if (!schedule.length && error) {
+    return (
+      <Container size="md" mt="md" px="xs">
+        <Card shadow="lg" withBorder radius="md" p="xl">
+          <Group justify="center" gap="sm">
+            <IconAlertCircle size={28} color="var(--mantine-color-red-6)" />
+            <Text c="red" fw={600}>
+              Не удалось загрузить расписание
+            </Text>
+          </Group>
+          <Text size="sm" c="dimmed" ta="center" mt="xs">
+            Попробуйте обновить страницу позже.
+          </Text>
+        </Card>
       </Container>
     );
   }
@@ -200,6 +240,22 @@ export default function Timetable() {
           </tbody>
         </table>
       </Card>
+
+      {/* Всплывающий индикатор обновления — поверх экрана, справа снизу, не блокирует и не двигает разметку */}
+      {refreshing && (
+        <Group className="refreshToast" gap={6} align="center">
+          <Loader size="xs" />
+          <Text size="sm" c="dimmed">Обновление…</Text>
+        </Group>
+      )}
+
+      {/* Всплывающее уведомление об ошибке обновления — скрывается через 10 секунд */}
+      {toastVisible && (
+        <Group className="errorToast" gap={6} align="center">
+          <IconAlertCircle size={18} />
+          <Text size="sm">Не удалось обновить данные.</Text>
+        </Group>
+      )}
     </Container>
   );
 }

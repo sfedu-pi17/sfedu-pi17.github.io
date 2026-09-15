@@ -19,6 +19,33 @@
   white-space: nowrap;
 }
 
+/* Всплывающий индикатор обновления: фиксирован справа снизу, поверх всего экрана */
+.refreshToast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1000;
+  padding: 8px 14px;
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-default);
+  border: 1px solid var(--mantine-color-default-border);
+  box-shadow: var(--mantine-shadow-lg);
+}
+
+/* Всплывающее уведомление об ошибке обновления — тоже справа снизу */
+.errorToast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1000;
+  padding: 8px 14px;
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-red-light);
+  color: var(--mantine-color-red-light-color);
+  border: 1px solid var(--mantine-color-red-light-color);
+  box-shadow: var(--mantine-shadow-lg);
+}
+
 .weekName {
   min-width: 96px;
   text-align: center;
