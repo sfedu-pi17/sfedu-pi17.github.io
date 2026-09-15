@@ -15,9 +15,10 @@ export const theme = createTheme({
   },
 
   /** Настройки шрифтов */
-  fontFamily: {
-    sans: ['Inter', 'system-ui', 'sans-serif'],
-    monospace: ['IBM Plex Mono', 'ui-monospace', 'monospace'],
+  fontFamily: 'Inter, system-ui, sans-serif',
+  fontFamilyMonospace: 'IBM Plex Mono, ui-monospace, monospace',
+  headings: {
+    fontFamily: 'Inter, system-ui, sans-serif',
   },
 
   /** Размеры и отступы */

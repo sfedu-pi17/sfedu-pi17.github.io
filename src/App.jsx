@@ -69,6 +69,7 @@ export default function App() {
             Расписание занятий
           </Title>
           <Badge variant="filled" color="blue">
+              {colorScheme} -
             {colorScheme === 'dark' ? 'Темная' : 'Светлая'} тема
           </Badge>
         </Group>
