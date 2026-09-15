@@ -74,15 +74,18 @@ export function parseDiscipline(raw) {
 
 // Привести запись к единому виду и нормализовать типы.
 function normalizeRecord(rec) {
-  const { name, type } = parseDiscipline(rec.discipline);
+  // Формат занятия теперь отдельная колонка; парсинг скобок из дисциплины
+  // оставлен как запасной вариант для старых данных, где тип был внутри названия.
+  const { name, type: parenType } = parseDiscipline(rec.discipline);
   return {
     week: rec.week?.trim() === 'нижняя' ? 'lower' : 'upper',
     day: rec.day?.trim(),
     lectureNumber: Number(rec.lecture_number) || 0,
     discipline: name,
-    type,
+    format: rec.format?.trim() || parenType || '',
     teacher: rec.teacher?.trim() || '',
     audience: rec.audience?.trim() || '',
+    subgroup: rec.subgroup?.trim() || '',
   };
 }
 

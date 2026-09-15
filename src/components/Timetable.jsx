@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Card, Text, Loader, Container, ActionIcon, Group, Badge, Button } from '@mantine/core';
+import { Card, Text, Loader, Container, ActionIcon, Group, Button } from '@mantine/core';
 import { IconChevronLeft, IconChevronRight, IconCalendar } from '@tabler/icons-react';
 import {
   DAY_ORDER,
@@ -27,25 +27,6 @@ const DAY_LABELS = {
   пт: 'Пт',
   сб: 'Сб',
 };
-
-const TYPE_COLORS = {
-  лекция: 'blue',
-  практика: 'green',
-  практ: 'green',
-  семинар: 'teal',
-  лабораторная: 'orange',
-  экзамен: 'red',
-};
-
-function getTypeBadge(type) {
-  if (!type) return null;
-  const color = TYPE_COLORS[type.toLowerCase()] ?? 'gray';
-  return (
-    <Badge size="xs" color={color} variant="light" className="typeBadge">
-      {type}
-    </Badge>
-  );
-}
 
 export default function Timetable() {
   const [schedule, setSchedule] = useState([]);
@@ -181,8 +162,9 @@ export default function Timetable() {
                       <>
                         <div className="subjectName">
                           {entry.discipline}
-                          {getTypeBadge(entry.type)}
+                          {entry.format && <span className="formatText"> ({entry.format})</span>}
                         </div>
+                        {entry.subgroup && <div className="subgroupText">{entry.subgroup}</div>}
                         {entry.teacher && <div className="subjectTeacher">{entry.teacher}</div>}
                       </>
                     ) : (
