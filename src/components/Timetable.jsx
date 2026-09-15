@@ -36,6 +36,9 @@ export default function Timetable() {
   const [week, setWeek] = useState(() => getCurrentWeekType());
   const [selectedDay, setSelectedDay] = useState(() => getTodayDayCode());
   const todayDay = useMemo(() => getTodayDayCode(), []);
+  const currentWeek = useMemo(() => getCurrentWeekType(), []);
+  // Зелёная обводка дня недели актуальна только когда показана текущая неделя.
+  const isCurrentWeek = week === currentWeek;
 
   useEffect(() => {
       console.log(123)
@@ -127,8 +130,8 @@ export default function Timetable() {
                     ? 'var(--mantine-color-blue-filled)'
                     : 'var(--mantine-color-default-hover)',
                   color: isSelected ? 'var(--mantine-color-white)' : 'var(--mantine-color-text)',
-                  borderColor: isToday ? 'var(--mantine-color-teal-filled)' : 'transparent',
-                  boxShadow: isToday ? 'inset 0 0 0 1px var(--mantine-color-teal-filled)' : 'none',
+                  borderColor: isCurrentWeek && isToday && !isSelected ? 'var(--mantine-color-teal-filled)' : 'transparent',
+                  boxShadow: isCurrentWeek && isToday && !isSelected ? 'inset 0 0 0 1px var(--mantine-color-teal-filled)' : 'none',
                 }}
                 onClick={() => setSelectedDay(day)}
                 aria-pressed={isSelected}
