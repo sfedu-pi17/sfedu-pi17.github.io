@@ -5,6 +5,30 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>schedule</title>
+
+    <!-- Тёмный фон по умолчанию, чтобы до загрузки JS не мигало белым -->
+    <style>
+      html {
+        background-color: #242424;
+      }
+    </style>
+    <script>
+      // Подгоняем фон под сохранённую/системную тему до первой отрисовки,
+      // чтобы у светлой темы не мигало тёмным.
+      (function () {
+        var dark = true;
+        try {
+          var saved = localStorage.getItem('mantine-color-scheme');
+          dark =
+            saved === 'dark' ||
+            (saved !== 'light' &&
+              (!window.matchMedia || window.matchMedia('(prefers-color-scheme: dark)').matches));
+        } catch (e) {
+          /* storage недоступен — оставляем тёмный по умолчанию */
+        }
+        document.documentElement.style.backgroundColor = dark ? '#242424' : '#ffffff';
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
