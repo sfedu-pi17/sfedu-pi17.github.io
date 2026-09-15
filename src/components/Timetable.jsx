@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Card, Text, Loader, Container, ActionIcon, Group, Badge } from '@mantine/core';
-import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
+import { Card, Text, Loader, Container, ActionIcon, Group, Badge, Button } from '@mantine/core';
+import { IconChevronLeft, IconChevronRight, IconCalendar } from '@tabler/icons-react';
 import {
   DAY_ORDER,
   LECTURE_TIMES,
@@ -57,10 +57,12 @@ export default function Timetable() {
   const todayDay = useMemo(() => getTodayDayCode(), []);
 
   useEffect(() => {
+      console.log(123)
     let cancelled = false;
     fetch(URL)
       .then((res) => res.text())
       .then((csvText) => {
+        console.log(csvText)
         if (cancelled) return;
         setSchedule(parseScheduleCsv(csvText));
         setLoading(false);
@@ -88,6 +90,12 @@ export default function Timetable() {
   const toggleWeek = () => setWeek((w) => (w === 'upper' ? 'lower' : 'upper'));
   const isUpper = week === 'upper';
 
+  // Быстрый переход к текущей неделе и текущему дню.
+  const goToday = () => {
+    setWeek(getCurrentWeekType());
+    setSelectedDay(getTodayDayCode());
+  };
+
   if (loading) {
     return (
       <Container size="md" pt="xl">
@@ -99,17 +107,28 @@ export default function Timetable() {
   return (
     <Container size="md" mt="md" px="xs">
       <Card shadow="lg" withBorder radius="md" p="sm">
-        {/* Переключатель недели */}
-        <Group justify="center" gap={6} className="weekToggle" mb="xs">
-          <ActionIcon variant="light" aria-label="Предыдущая неделя" onClick={toggleWeek}>
-            <IconChevronLeft size={20} />
-          </ActionIcon>
-          <Text fw={700} size="md" className="weekName">
-            {isUpper ? 'Верхняя неделя' : 'Нижняя неделя'}
-          </Text>
-          <ActionIcon variant="light" aria-label="Следующая неделя" onClick={toggleWeek}>
-            <IconChevronRight size={20} />
-          </ActionIcon>
+        {/* Шапка: неделя по центру, «Сегодня» в правом углу */}
+        <Group className="weekHeader" wrap="nowrap" align="center" gap="xs">
+          <Group justify="center" gap={6} className="weekToggle">
+            <ActionIcon variant="light" aria-label="Предыдущая неделя" onClick={toggleWeek}>
+              <IconChevronLeft size={20} />
+            </ActionIcon>
+            <Text fw={700} size="md" className="weekName">
+              {isUpper ? 'Верхняя неделя' : 'Нижняя неделя'}
+            </Text>
+            <ActionIcon variant="light" aria-label="Следующая неделя" onClick={toggleWeek}>
+              <IconChevronRight size={20} />
+            </ActionIcon>
+          </Group>
+          <Button
+            size="xs"
+            variant="light"
+            className="todayBtn"
+            leftSection={<IconCalendar size={14} />}
+            onClick={goToday}
+          >
+            Сегодня
+          </Button>
         </Group>
 
         {/* Выбор дня недели; сегодняшний день подсвечен отдельно */}

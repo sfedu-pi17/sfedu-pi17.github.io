@@ -2,8 +2,25 @@
   /* ровная, стабильная по высоте кнопка с названием недели */
 }
 
+/* Шапка: одна строка — неделя по центру, «Сегодня» прижата к правому краю */
+.weekHeader {
+  margin-bottom: var(--mantine-spacing-xs);
+}
+
+/* Растягиваем блок недели, чтобы она центрировалась в оставшемся месте */
+.weekToggle {
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+}
+
+.todayBtn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .weekName {
-  min-width: 120px;
+  min-width: 96px;
   text-align: center;
   white-space: nowrap;
 }
