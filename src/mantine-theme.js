@@ -53,6 +53,18 @@ export const theme = createTheme({
 
   /** Подсветка активного состояния */
   primaryColor: 'blue',
+
+  /** Глобальные стили компонентов */
+  components: {
+    Title: {
+      styles: {
+        root: {
+          // var(--mantine-color-text) резолвится по схеме: #000 в светлой, светлый в тёмной
+          color: 'var(--mantine-color-text)',
+        },
+      },
+    },
+  },
 });
 
 export { MantineProvider };
