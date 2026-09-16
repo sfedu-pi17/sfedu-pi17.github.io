@@ -16,6 +16,7 @@ function buildHash() {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: '/',
   server: {
     host: '0.0.0.0', // доступ с других устройств по локальной сети
   },
