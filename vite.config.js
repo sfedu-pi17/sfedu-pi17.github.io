@@ -7,4 +7,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0', // доступ с других устройств по локальной сети
   },
+  test: {
+    environment: 'node',
+  },
 })
