@@ -250,4 +250,19 @@ describe('кэш в localStorage', () => {
     localStorage.setItem('sfedu.schedule', '{not json');
     expect(loadScheduleCache()).toEqual([]);
   });
+
+  it('кэш с несовпадающей версией очищается и считается пустым', () => {
+    localStorage.setItem(
+      'sfedu.schedule',
+      JSON.stringify({ version: 'other-build', data: [{ week: 'upper', day: 'пн', lectureNumber: 1 }] }),
+    );
+    expect(loadScheduleCache()).toEqual([]);
+    expect(localStorage.getItem('sfedu.schedule')).toBeNull();
+  });
+
+  it('кэш старого формата (голый массив) распознаётся как несовместимый и очищается', () => {
+    localStorage.setItem('sfedu.schedule', JSON.stringify([{ week: 'upper', day: 'пн', lectureNumber: 1 }]));
+    expect(loadScheduleCache()).toEqual([]);
+    expect(localStorage.getItem('sfedu.schedule')).toBeNull();
+  });
 });
