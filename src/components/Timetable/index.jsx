@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, Text, Loader, Container, ActionIcon, Group, Button } from '@mantine/core';
-import { IconChevronLeft, IconChevronRight, IconCalendar, IconAlertCircle } from '@tabler/icons-react';
+import { IconChevronLeft, IconChevronRight, IconAlertCircle } from '@tabler/icons-react';
 import {
   DAY_ORDER,
   LECTURE_TIMES,
@@ -284,7 +284,6 @@ export default function Timetable() {
             size="xs"
             variant="default"
             className={isTodayView ? 'todayBtn mutedBtn todayHidden' : 'todayBtn mutedBtn'}
-            leftSection={<IconCalendar size={14} />}
             onClick={goToday}
           >
             Сегодня
