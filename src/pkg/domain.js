@@ -54,6 +54,26 @@ export function getTodayDayCode(date = new Date()) {
   return DAY_ORDER.includes(code) ? code : 'пн';
 }
 
+// Даты всех дней (пн..сб) для недели со сдвигом offset от текущей:
+// 0 — текущая неделя, +1 — следующая, -1 — предыдущая и т.д. (листается в обе стороны).
+export function getDayDates(offset, date = new Date()) {
+  const monday = new Date(startOfWeek(date).getTime() + offset * 7 * 24 * 60 * 60 * 1000);
+  return Object.fromEntries(
+    DAY_ORDER.map((day, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return [day, d];
+    })
+  );
+}
+
+// Летние каникулы: пар нет с июля по 1 сентября включительно (месяцы 6, 7 и 8-го числа 1).
+export function isSummerBreak(date) {
+  const m = date.getMonth();
+  if (m === 6 || m === 7) return true;
+  return m === 8 && date.getDate() === 1;
+}
+
 // Номер пары, которая идёт прямо сейчас (если текущее время попадает в её диапазон),
 // иначе null.
 export function getCurrentLectureNumber(date = new Date()) {

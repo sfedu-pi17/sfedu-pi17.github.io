@@ -1,16 +1,10 @@
-.weekToggle {
-  /* ровная, стабильная по высоте кнопка с названием недели */
-}
-
-/* Шапка: одна строка — неделя по центру, «Сегодня» прижата к правому краю */
 .weekHeader {
   margin-bottom: var(--mantine-spacing-xs);
 }
 
-/* Растягиваем блок недели, чтобы она центрировалась в оставшемся месте */
 .weekToggle {
   flex: 1;
-  justify-content: center;
+  justify-content: flex-start;
   min-width: 0;
 }
 
@@ -62,15 +56,26 @@
 .dayChip {
   flex: 1 1 auto;
   min-width: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
   border-radius: var(--mantine-radius-md);
   padding: 6px 4px;
   font-weight: 600;
-  text-align: center;
   cursor: pointer;
   border: 1px solid transparent;
   transition: background-color 0.15s ease, border-color 0.15s ease;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
+}
+
+.dayDate {
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.65;
 }
 
 /* Уведомление «есть изменения» */

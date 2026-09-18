@@ -10,6 +10,8 @@ import {
   diffSchedule,
   groupByWeekDay,
   buildReviewSteps,
+  getDayDates,
+  isSummerBreak,
 } from '../../pkg/domain.js';
 import { parseScheduleCsv } from '../../pkg/serialization.js';
 import { loadScheduleCache, saveScheduleCache } from '../../pkg/storage.js';
@@ -76,6 +78,10 @@ function ChangedAudience({ change }) {
   return <DiffPair oldVal={ov} newVal={nv} />;
 }
 
+// Дата в формате дд.мм для подписи под днём недели.
+const formatDayDate = (d) =>
+  `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+
 export default function Timetable() {
   const [schedule, setSchedule] = useState(() => loadScheduleCache());
   // Догрузка свежих данных: показывает компактный индикатор (тост), не блокируя интерфейс.
@@ -92,12 +98,14 @@ export default function Timetable() {
   const [isReviewing, setIsReviewing] = useState(false);
 
   // По умолчанию — текущая неделя и текущий день.
-  const [week, setWeek] = useState(() => getCurrentWeekType());
+  const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDay, setSelectedDay] = useState(() => getTodayDayCode());
   const todayDay = useMemo(() => getTodayDayCode(), []);
   const currentWeek = useMemo(() => getCurrentWeekType(), []);
+  // Тип показанной недели для расписания: чётный сдвиг — та же, нечётный — противоположная.
+  const week = weekOffset % 2 === 0 ? currentWeek : currentWeek === 'upper' ? 'lower' : 'upper';
   // Зелёная обводка дня недели актуальна только когда показана текущая неделя.
-  const isCurrentWeek = week === currentWeek;
+  const isCurrentWeek = weekOffset === 0;
 
   // Текущее время: обновляем, чтобы метка текущей пары не устаревала.
   const [now, setNow] = useState(() => new Date());
@@ -153,6 +161,9 @@ export default function Timetable() {
   // Записи текущей недели, сгруппированные по дню и номеру пары.
   const weekDayMap = useMemo(() => groupByWeekDay(schedule, week), [schedule, week]);
 
+  // Даты дней для отображаемой недели (под подписями пн..сб).
+  const dayDates = useMemo(() => getDayDates(weekOffset), [weekOffset]);
+
   // Изменённые дни/пары для текущей отображаемой недели.
   const weekChanges = changes[week] || {};
   const dayChanged = (day) => {
@@ -161,12 +172,14 @@ export default function Timetable() {
   };
   const pairChange = (day, num) => weekChanges[day]?.[num] || null;
 
-  const toggleWeek = () => setWeek((w) => (w === 'upper' ? 'lower' : 'upper'));
+  // Листание недель: в обе стороны бесконечно.
+  const prevWeek = () => setWeekOffset((o) => o - 1);
+  const nextWeek = () => setWeekOffset((o) => o + 1);
   const isUpper = week === 'upper';
 
   // Быстрый переход к текущей неделе и текущему дню.
   const goToday = () => {
-    setWeek(getCurrentWeekType());
+    setWeekOffset(0);
     setSelectedDay(getTodayDayCode());
   };
 
@@ -178,10 +191,10 @@ export default function Timetable() {
   const startReview = () => {
     setIsReviewing(true);
     if (reviewSteps[0]) {
-      setWeek(reviewSteps[0].week);
+      setWeekOffset(reviewSteps[0].week === currentWeek ? 0 : 1);
       setSelectedDay(reviewSteps[0].day);
     } else {
-      setWeek(currentWeek);
+      setWeekOffset(0);
       setSelectedDay('пн');
     }
   };
@@ -200,7 +213,7 @@ export default function Timetable() {
   const nextDay = () => {
     if (currentStepIndex !== -1 && currentStepIndex < reviewSteps.length - 1) {
       const { week: w, day: d } = reviewSteps[currentStepIndex + 1];
-      setWeek(w);
+      setWeekOffset(w === currentWeek ? 0 : 1);
       setSelectedDay(d);
     }
   };
@@ -256,28 +269,29 @@ export default function Timetable() {
 
         {/* Шапка: неделя по центру, «Сегодня» в правом углу */}
         <Group className="weekHeader" wrap="nowrap" align="center" gap="xs">
-          <Group justify="center" gap={6} className="weekToggle">
-            <ActionIcon variant="light" aria-label="Предыдущая неделя" onClick={toggleWeek}>
+          <Group justify="flex-start" gap={6} className="weekToggle">
+            <ActionIcon variant="light" aria-label="Предыдущая неделя" onClick={prevWeek}>
               <IconChevronLeft size={20} />
             </ActionIcon>
             <Text fw={700} size="md" className="weekName">
               {isUpper ? 'Верхняя неделя' : 'Нижняя неделя'}
             </Text>
-            <ActionIcon variant="light" aria-label="Следующая неделя" onClick={toggleWeek}>
+            <ActionIcon variant="light" aria-label="Следующая неделя" onClick={nextWeek}>
               <IconChevronRight size={20} />
             </ActionIcon>
           </Group>
-          {!isTodayView && (
-            <Button
-              size="xs"
-              variant="light"
-              className="todayBtn"
-              leftSection={<IconCalendar size={14} />}
-              onClick={goToday}
-            >
-              Сегодня
-            </Button>
-          )}
+          <Button
+            size="xs"
+            variant="light"
+            className="todayBtn"
+            leftSection={<IconCalendar size={14} />}
+            onClick={goToday}
+            // Всегда держим кнопку в разметке, но прячем её, когда мы уже на «сегодня»,
+            // чтобы высота шапки не менялась и макет не «прыгал».
+            style={{ visibility: isTodayView ? 'hidden' : 'visible' }}
+          >
+            Сегодня
+          </Button>
         </Group>
 
         {/* Выбор дня недели; сегодняшний день подсвечен отдельно, изменённые — жёлтым */}
@@ -296,25 +310,23 @@ export default function Timetable() {
                     ? 'var(--mantine-color-yellow-light)'
                     : isSelected
                       ? 'var(--mantine-color-blue-filled)'
-                      : 'var(--mantine-color-default-hover)',
+                      : isCurrentWeek && isToday
+                        ? 'var(--mantine-color-blue-light)'
+                        : 'var(--mantine-color-default-hover)',
                   color: isChanged
                     ? 'var(--mantine-color-yellow-light-color)'
                     : isSelected
                       ? 'var(--mantine-color-white)'
-                      : 'var(--mantine-color-text)',
-                  boxShadow: [
-                    isCurrentWeek && isToday && !isSelected
-                      ? 'inset 0 0 0 1px var(--mantine-color-teal-filled)'
-                      : null,
-                    isSelected ? 'inset 0 -3px 0 0 var(--mantine-color-blue-filled)' : null,
-                  ]
-                    .filter(Boolean)
-                    .join(', ') || 'none',
+                      : isCurrentWeek && isToday
+                        ? 'var(--mantine-color-blue-light-color)'
+                        : 'var(--mantine-color-text)',
+                  boxShadow: isSelected ? 'inset 0 -3px 0 0 var(--mantine-color-blue-filled)' : 'none',
                 }}
                 onClick={() => setSelectedDay(day)}
                 aria-pressed={isSelected}
               >
-                {DAY_LABELS[day]}
+                <span className="dayLabel">{DAY_LABELS[day]}</span>
+                <span className="dayDate">{formatDayDate(dayDates[day])}</span>
               </button>
             );
           })}
@@ -333,8 +345,11 @@ export default function Timetable() {
           <tbody>
             {Array.from({ length: 6 }, (_, i) => {
               const number = i + 1;
-              const entry = weekDayMap[selectedDay][number];
-              const change = pairChange(selectedDay, number);
+              // Летом (июль–август) пар нет — не показываем их даже если тип
+              // недели совпадает с учебной.
+              const summerBreak = isSummerBreak(dayDates[selectedDay]);
+              const entry = summerBreak ? null : weekDayMap[selectedDay][number];
+              const change = summerBreak ? null : pairChange(selectedDay, number);
               const classes = [
                 number === currentLecture ? 'currentLecture' : null,
                 change ? 'changedPair' : null,
