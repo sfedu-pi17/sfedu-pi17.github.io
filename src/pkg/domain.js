@@ -1,6 +1,7 @@
-// Сериализатор расписания: CSV из Google Sheets -> структура для UI.
-// В первой строке CSV идут названия колонок — они используются как имена полей.
-// Известная опечатка в заголовке «auaudience» нормализуется в «audience».
+// Бизнес-логика расписания: константы и чистые функции.
+// Никаких побочных эффектов — без React, без localStorage, без fetch.
+// Здесь только правила предметной области:
+// порядок дней, время пар, чередование недель, сравнение и группировка записей.
 
 export const DAY_ORDER = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
 
@@ -14,53 +15,6 @@ export const LECTURE_TIMES = {
   6: '17:40 - 19:15',
 };
 
-// Распарсить полный CSV-текст в массив строк (учитывает кавычки и переводы строк).
-function parseCsv(text) {
-  const rows = [];
-  let row = [];
-  let field = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-
-    if (inQuotes) {
-      if (ch === '"') {
-        if (text[i + 1] === '"') {
-          field += '"';
-          i++;
-        } else {
-          inQuotes = false;
-        }
-      } else {
-        field += ch;
-      }
-      continue;
-    }
-
-    if (ch === '"') {
-      inQuotes = true;
-    } else if (ch === ',') {
-      row.push(field);
-      field = '';
-    } else if (ch === '\n') {
-      row.push(field);
-      rows.push(row);
-      row = [];
-      field = '';
-    } else if (ch !== '\r') {
-      field += ch;
-    }
-  }
-
-  if (field.length || row.length) {
-    row.push(field);
-    rows.push(row);
-  }
-
-  return rows;
-}
-
 // Выделить название дисциплины и тип занятия из строки вида
 // «Технологии и фронтиры в области комп. наук и ИИ (лекция)».
 export function parseDiscipline(raw) {
@@ -70,47 +24,6 @@ export function parseDiscipline(raw) {
     return { name: match[1].trim(), type: match[2].trim() };
   }
   return { name: value, type: null };
-}
-
-// Привести запись к единому виду и нормализовать типы.
-function normalizeRecord(rec) {
-  // Формат занятия теперь отдельная колонка; парсинг скобок из дисциплины
-  // оставлен как запасной вариант для старых данных, где тип был внутри названия.
-  const { name, type: parenType } = parseDiscipline(rec.discipline);
-  return {
-    week: rec.week?.trim() === 'нижняя' ? 'lower' : 'upper',
-    day: rec.day?.trim(),
-    lectureNumber: Number(rec.lecture_number) || 0,
-    discipline: name,
-    format: rec.format?.trim() || parenType || '',
-    teacher: rec.teacher?.trim() || '',
-    audience: rec.audience?.trim() || '',
-    subgroup: rec.subgroup?.trim() || '',
-  };
-}
-
-export function parseScheduleCsv(csvText) {
-  if (!csvText) return [];
-  const rows = parseCsv(csvText);
-  if (!rows.length) return [];
-
-  // Первая строка — названия колонок.
-  const header = rows[0];
-  const fields = header.map((raw, index) => {
-    const name = raw.trim().toLowerCase().includes('audien') ? 'audience' : raw.trim();
-    return { name, index };
-  });
-
-  return rows
-    .slice(1)
-    .map((cells) => {
-      const rec = {};
-      fields.forEach(({ name, index }) => {
-        rec[name] = (cells[index] ?? '').trim();
-      });
-      return normalizeRecord(rec);
-    })
-    .filter((item) => item.day && item.lectureNumber > 0);
 }
 
 // Первый день недели (понедельник) с обнулённым временем.
@@ -139,43 +52,6 @@ export function getTodayDayCode(date = new Date()) {
   const map = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
   const code = map[date.getDay()];
   return DAY_ORDER.includes(code) ? code : 'пн';
-}
-
-// Кэш расписания в localStorage: при открытии страницы сначала показываем сохранённые
-// данные, а свежие подтягиваем асинхронно в фоне. Храним версию сборки (envelope):
-// если версия в localStorage не совпадает с текущим билдом — кэш несовместим,
-// очищаем и работаем как будто его нет.
-const STORAGE_KEY = 'sfedu.schedule';
-const CACHE_VERSION = __BUILD_HASH__;
-
-export function loadScheduleCache() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (
-      parsed &&
-      typeof parsed === 'object' &&
-      !Array.isArray(parsed) &&
-      parsed.version === CACHE_VERSION &&
-      Array.isArray(parsed.data)
-    ) {
-      return parsed.data;
-    }
-    // Несовместимый или старый формат (голый массив) — очистить и работать без кэша.
-    localStorage.removeItem(STORAGE_KEY);
-    return [];
-  } catch {
-    return [];
-  }
-}
-
-export function saveScheduleCache(schedule) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: CACHE_VERSION, data: schedule }));
-  } catch {
-    // приватный режим / переполнение хранилища — игнорируем
-  }
 }
 
 // Номер пары, которая идёт прямо сейчас (если текущее время попадает в её диапазон),
@@ -230,4 +106,30 @@ export function diffSchedule(oldList, newList) {
     result[week][day][Number(num)] = { old: oldEntry || null, new: newEntry || null };
   }
   return result;
+}
+
+// Записи одной недели, сгруппированные по дню и номеру пары:
+// { [day]: { [lectureNumber]: record } }.
+export function groupByWeekDay(schedule, week) {
+  const map = Object.fromEntries(DAY_ORDER.map((d) => [d, {}]));
+  schedule.forEach((item) => {
+    if (item.week !== week) return;
+    if (!map[item.day]) return;
+    map[item.day][item.lectureNumber] = item;
+  });
+  return map;
+}
+
+// Порядок просмотра изменений: сначала текущая неделя (пн..сб), потом следующая (пн..сб),
+// только изменённые дни. Так «Далее» при исчерпании недели переходит на следующую.
+export function buildReviewSteps(changes, currentWeek) {
+  const otherWeek = currentWeek === 'upper' ? 'lower' : 'upper';
+  const daysOf = (w) =>
+    changes[w]
+      ? DAY_ORDER.filter((d) => changes[w][d] && Object.keys(changes[w][d]).length).map((d) => ({
+          week: w,
+          day: d,
+        }))
+      : [];
+  return [...daysOf(currentWeek), ...daysOf(otherWeek)];
 }

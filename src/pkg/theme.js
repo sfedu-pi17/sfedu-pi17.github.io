@@ -1,4 +1,4 @@
-import { MantineProvider, createTheme } from '@mantine/core';
+import { createTheme } from '@mantine/core';
 
 export const theme = createTheme({
   /** Параметры цветовой схемы - используем 'auto' для автоматического определения */
@@ -67,5 +67,3 @@ export const theme = createTheme({
     },
   },
 });
-
-export { MantineProvider };

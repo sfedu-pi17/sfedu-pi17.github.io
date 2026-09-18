@@ -4,22 +4,17 @@ import { IconChevronLeft, IconChevronRight, IconCalendar, IconAlertCircle } from
 import {
   DAY_ORDER,
   LECTURE_TIMES,
-  parseScheduleCsv,
   getCurrentWeekType,
   getTodayDayCode,
   getCurrentLectureNumber,
-  loadScheduleCache,
-  saveScheduleCache,
   diffSchedule,
-} from '../../lib/scheduleSerializer.js';
+  groupByWeekDay,
+  buildReviewSteps,
+} from '../../pkg/domain.js';
+import { parseScheduleCsv } from '../../pkg/serialization.js';
+import { loadScheduleCache, saveScheduleCache } from '../../pkg/storage.js';
+import { fetchScheduleCsv } from '../../pkg/api.js';
 import './Timetable.css';
-
-const PUB_ID = '2PACX-1vRSIJwnvklsU8oP6GROruCJvfCSy_duAmcGwJ0uwHj5e7X69EAJTU49QUW-ndqeLA2gkhhL2i0Xfcph';
-const LIST = {
-  schedule: 1227335714,
-};
-
-const URL = `https://docs.google.com/spreadsheets/d/e/${PUB_ID}/pub?gid=${LIST.schedule}&output=csv`;
 
 const DAY_LABELS = {
   пн: 'Пн',
@@ -126,11 +121,9 @@ export default function Timetable() {
     // Старые данные на момент загрузки — для сравнения изменений.
     const oldData = loadScheduleCache();
     let cancelled = false;
-    fetch(URL)
-      .then((res) => res.text())
+    fetchScheduleCsv()
       .then((csvText) => {
         if (cancelled) return;
-        console.log(csvText)
         const data = parseScheduleCsv(csvText);
         saveScheduleCache(data);
         const diffed = diffSchedule(oldData, data);
@@ -158,15 +151,7 @@ export default function Timetable() {
   }, []);
 
   // Записи текущей недели, сгруппированные по дню и номеру пары.
-  const weekDayMap = useMemo(() => {
-    const map = Object.fromEntries(DAY_ORDER.map((d) => [d, {}]));
-    schedule.forEach((item) => {
-      if (item.week !== week) return;
-      if (!map[item.day]) return;
-      map[item.day][item.lectureNumber] = item;
-    });
-    return map;
-  }, [schedule, week]);
+  const weekDayMap = useMemo(() => groupByWeekDay(schedule, week), [schedule, week]);
 
   // Изменённые дни/пары для текущей отображаемой недели.
   const weekChanges = changes[week] || {};
@@ -187,17 +172,7 @@ export default function Timetable() {
 
   // Порядок просмотра изменений: сначала текущая неделя (пн..сб), потом следующая (пн..сб),
   // только изменённые дни. Так «Далее» при исчерпании недели переходит на следующую.
-  const otherWeek = currentWeek === 'upper' ? 'lower' : 'upper';
-  const reviewSteps = useMemo(() => {
-    const daysOf = (w) =>
-      changes[w]
-        ? DAY_ORDER.filter((d) => changes[w][d] && Object.keys(changes[w][d]).length).map((d) => ({
-            week: w,
-            day: d,
-          }))
-        : [];
-    return [...daysOf(currentWeek), ...daysOf(otherWeek)];
-  }, [changes, currentWeek, otherWeek]);
+  const reviewSteps = useMemo(() => buildReviewSteps(changes, currentWeek), [changes, currentWeek]);
 
   // Запуск просмотра изменений: переходим на текущую неделю, к первому изменённому дню.
   const startReview = () => {
