@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, Text, Loader, Container, ActionIcon, Group, Button } from '@mantine/core';
 import { IconChevronLeft, IconChevronRight, IconAlertCircle } from '@tabler/icons-react';
 import {
@@ -111,6 +111,9 @@ export default function Timetable() {
   // Зелёная обводка дня недели актуальна только когда показана текущая неделя.
   const isCurrentWeek = weekOffset === 0;
 
+  // Новое расписание, ещё не записанное в кэш: сохраняем только после «ОК» в режиме изменений.
+  const pendingData = useRef(null);
+
   // Текущее время: обновляем, чтобы метка текущей пары не устаревала.
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -138,11 +141,14 @@ export default function Timetable() {
         console.log(csvText)
         if (cancelled) return;
         const data = parseScheduleCsv(csvText);
-        saveScheduleCache(data);
         const diffed = diffSchedule(oldData, data);
+        // Если есть изменения — не сохраняем кэш, ждём подтверждения «ОК»;
+        // иначе (нет старых данных или всё совпало) пишем сразу.
+        const hasChanges = oldData.length && Object.keys(diffed).length;
+        pendingData.current = data;
+        if (!hasChanges) saveScheduleCache(data);
         setChanges(diffed);
-        // Уведомление показываем только если старые данные были и есть изменения.
-        if (oldData.length && Object.keys(diffed).length) {
+        if (hasChanges) {
           setShowNotif(true);
         }
         setSchedule(data);
@@ -204,8 +210,9 @@ export default function Timetable() {
     }
   };
 
-  // Завершение режима сравнения («ОК») — убираем уведомление и подсветку.
+  // Завершение режима сравнения («ОК») — сохраняем новое расписание, убираем уведомление и подсветку.
   const dismissChanges = () => {
+    if (pendingData.current) saveScheduleCache(pendingData.current);
     setIsReviewing(false);
     setShowNotif(false);
     setChanges({});
