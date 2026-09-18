@@ -267,15 +267,17 @@ export default function Timetable() {
               <IconChevronRight size={20} />
             </ActionIcon>
           </Group>
-          <Button
-            size="xs"
-            variant="light"
-            className="todayBtn"
-            leftSection={<IconCalendar size={14} />}
-            onClick={goToday}
-          >
-            Сегодня
-          </Button>
+          {!isTodayView && (
+            <Button
+              size="xs"
+              variant="light"
+              className="todayBtn"
+              leftSection={<IconCalendar size={14} />}
+              onClick={goToday}
+            >
+              Сегодня
+            </Button>
+          )}
         </Group>
 
         {/* Выбор дня недели; сегодняшний день подсвечен отдельно, изменённые — жёлтым */}
