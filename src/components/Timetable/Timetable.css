@@ -28,6 +28,15 @@
   font-weight: 600 !important;
 }
 
+/* Стрелка «назад» на текущей неделе недоступна: прошлых недель уже нет.
+   !important перекрывает и .mutedBtn, и дефолтный disabled-вид Mantine, чтобы приглушить её. */
+.mutedBtn:disabled {
+  opacity: 0.35 !important;
+  cursor: not-allowed !important;
+  background-color: var(--mantine-color-default-hover) !important;
+  color: var(--mantine-color-dimmed) !important;
+}
+
 /* Всплывающий индикатор обновления: фиксирован справа снизу, поверх всего экрана */
 .refreshToast {
   position: fixed;

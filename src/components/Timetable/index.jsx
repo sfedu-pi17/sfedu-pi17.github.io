@@ -126,6 +126,9 @@ export default function Timetable() {
   const week = weekOffset % 2 === 0 ? currentWeek : currentWeek === 'upper' ? 'lower' : 'upper';
   // Зелёная обводка дня недели актуальна только когда показана текущая неделя.
   const isCurrentWeek = weekOffset === 0;
+  // Назад (в прошлые недели) можно листать только когда это не текущая неделя:
+  // у сегодняшней даты прошлого больше нет.
+  const isPrevDisabled = weekOffset <= 0;
 
   // Новое расписание, ещё не записанное в кэш: сохраняем только после «ОК» в режиме изменений.
   const pendingData = useRef(null);
@@ -199,8 +202,8 @@ export default function Timetable() {
   };
   const pairChange = (day, num) => weekChanges[day]?.[num] || null;
 
-  // Листание недель: в обе стороны бесконечно.
-  const prevWeek = () => setWeekOffset((o) => o - 1);
+  // Листание недель вперёд — бесконечно, назад — только до текущей.
+  const prevWeek = () => setWeekOffset((o) => Math.max(o - 1, 0));
   const nextWeek = () => setWeekOffset((o) => o + 1);
   const isUpper = week === 'upper';
 
@@ -300,7 +303,13 @@ export default function Timetable() {
         {/* Шапка: неделя по центру, «Сегодня» в правом углу */}
         <Group className="weekHeader" wrap="nowrap" align="center" gap="xs">
           <Group justify="flex-start" gap={6} className="weekToggle">
-            <ActionIcon variant="default" aria-label="Предыдущая неделя" onClick={prevWeek} className="mutedBtn">
+            <ActionIcon
+              variant="default"
+              aria-label="Предыдущая неделя"
+              onClick={prevWeek}
+              disabled={isPrevDisabled}
+              className="mutedBtn"
+            >
               <IconChevronLeft size={20} />
             </ActionIcon>
             <Text fw={700} size="md" className="weekName">
