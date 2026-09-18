@@ -166,8 +166,12 @@
   min-width: 0;
 }
 
-/* Длинные названия дисциплин переносятся, а не режутся по ширине ячейки */
+/* Колонка «Дисциплина»: название прижато к верху, ФИО — к низу ячейки
+   (строки в сетке растянуты на 1fr, лишнее пространство распределяем между блоками) */
 .scheduleRow > .subjectCell {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   overflow-wrap: break-word;
   word-break: break-word;
 }

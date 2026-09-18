@@ -26,6 +26,31 @@ export function parseDiscipline(raw) {
   return { name: value, type: null };
 }
 
+// Привести ФИО преподавателя к виду «Фамилия И. О.»:
+// «Каплицкий Иван Олегович» -> «Каплицкий И. О.», «Каплицкий И.О.» -> «Каплицкий И. О.».
+// Если имени нет (или в поле не человек, например «индивидуально») — возвращаем как есть.
+export function formatTeacher(raw) {
+  const name = String(raw ?? '').replace(/\s+/g, ' ').trim();
+  if (!name) return '';
+  const parts = name.split(' ');
+  const surname = parts[0];
+  const rest = parts.slice(1);
+  if (!rest.length) return surname;
+
+  const initials = rest
+    .map((part) => {
+      const letters = part.replace(/[^A-Za-zА-Яа-яЁё]/g, '');
+      if (!letters) return '';
+      // «И. О.» / «И.О.» — несколько инициалов подряд, берём все;
+      // «Иван» — полное имя, берём первую букву.
+      return part.includes('.') || letters.length === 1 ? letters : letters[0];
+    })
+    .filter(Boolean)
+    .map((seg) => `${seg.toUpperCase().split('').join('. ')}.`)
+    .join(' ');
+  return initials ? `${surname} ${initials}` : surname;
+}
+
 // Первый день недели (понедельник) с обнулённым временем.
 function startOfWeek(date) {
   const d = new Date(date);

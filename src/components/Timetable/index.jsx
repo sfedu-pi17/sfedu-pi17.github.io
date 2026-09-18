@@ -13,6 +13,7 @@ import {
   getDayDates,
   isSummerBreak,
   isCancelledOn,
+  formatTeacher,
 } from '../../pkg/domain.js';
 import { parseScheduleCsv } from '../../pkg/serialization.js';
 import { loadScheduleCache, saveScheduleCache } from '../../pkg/storage.js';
@@ -31,14 +32,16 @@ const DAY_LABELS = {
 // Однострочный diff поля: старое (красное, зачёркнутое) -> новое (зелёное).
 // Пустую сторону не выводим: если старого нет — не показываем красное,
 // если нового нет — не показываем зелёное.
-function DiffPair({ oldVal, newVal }) {
+function DiffPair({ oldVal, newVal, fmt }) {
   const showOld = !!oldVal;
   const showNew = !!newVal;
   if (!showOld && !showNew) return null;
+  const o = showOld && fmt ? fmt(oldVal) : oldVal;
+  const n = showNew && fmt ? fmt(newVal) : newVal;
   return (
     <span>
-      {showOld && <span className="diffOld">{oldVal}</span>}
-      {showNew && <span className="diffNew">{newVal}</span>}
+      {showOld && <span className="diffOld">{o}</span>}
+      {showNew && <span className="diffNew">{n}</span>}
     </span>
   );
 }
@@ -55,7 +58,7 @@ function ChangedDiscipline({ change }) {
     }
     return (
       <div key={key} className={cls}>
-        <DiffPair oldVal={ov} newVal={nv} />
+        <DiffPair oldVal={ov} newVal={nv} fmt={fmt} />
       </div>
     );
   };
@@ -65,7 +68,7 @@ function ChangedDiscipline({ change }) {
       {field('discipline', 'subjectName')}
       {field('format', 'formatText', (v) => `(${v})`)}
       {field('subgroup', 'subgroupText')}
-      {field('teacher', 'subjectTeacher')}
+      {field('teacher', 'subjectTeacher', formatTeacher)}
     </>
   );
 }
@@ -371,7 +374,7 @@ export default function Timetable() {
                         {entry.format && <span className="formatText"> ({entry.format})</span>}
                       </div>
                       {entry.subgroup && <div className="subgroupText">{entry.subgroup}</div>}
-                      {entry.teacher && <div className="subjectTeacher">{entry.teacher}</div>}
+                      {entry.teacher && <div className="subjectTeacher">{formatTeacher(entry.teacher)}</div>}
                     </>
                   ) : (
                     <Text size="sm" c="dimmed">

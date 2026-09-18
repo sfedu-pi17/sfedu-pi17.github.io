@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   parseDiscipline,
+  formatTeacher,
   getCurrentWeekType,
   getTodayDayCode,
   getCurrentLectureNumber,
@@ -20,6 +21,31 @@ describe('parseDiscipline', () => {
       name: 'Иностранный язык',
       type: null,
     });
+  });
+});
+
+describe('formatTeacher', () => {
+  it('полное имя -> Фамилия И. О.', () => {
+    expect(formatTeacher('Каплицкий Иван Олегович')).toBe('Каплицкий И. О.');
+  });
+
+  it('уже сокращённое имя не меняет порядок инициалов', () => {
+    expect(formatTeacher('Каплицкий И. О.')).toBe('Каплицкий И. О.');
+    expect(formatTeacher('Каплицкий И.О.')).toBe('Каплицкий И. О.');
+  });
+
+  it('без отчества -> Фамилия И.', () => {
+    expect(formatTeacher('Каплицкий Иван')).toBe('Каплицкий И.');
+  });
+
+  it('одно слово и не-человек возвращаются как есть', () => {
+    expect(formatTeacher('Каплицкий')).toBe('Каплицкий');
+    expect(formatTeacher('индивидуально')).toBe('индивидуально');
+  });
+
+  it('пустая строка -> пусто', () => {
+    expect(formatTeacher('')).toBe('');
+    expect(formatTeacher(null)).toBe('');
   });
 });
 
