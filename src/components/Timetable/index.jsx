@@ -251,13 +251,13 @@ export default function Timetable() {
               <Text size="sm" fw={600}>В расписании есть изменения</Text>
             </Group>
             <Group gap="xs">
-              <Button size="xs" variant="subtle" color="gray" onClick={dismissChanges}>
+              <Button size="xs" variant="default" onClick={dismissChanges} className="mutedBtn">
                 ОК
               </Button>
               <Button
                 size="xs"
-                variant="light"
-                color={isReviewing ? 'blue' : 'yellow'}
+                variant="default"
+                className="mutedBtn"
                 disabled={isReviewing && !hasNextChangedDay}
                 onClick={isReviewing ? nextDay : startReview}
               >
@@ -270,25 +270,22 @@ export default function Timetable() {
         {/* Шапка: неделя по центру, «Сегодня» в правом углу */}
         <Group className="weekHeader" wrap="nowrap" align="center" gap="xs">
           <Group justify="flex-start" gap={6} className="weekToggle">
-            <ActionIcon variant="light" aria-label="Предыдущая неделя" onClick={prevWeek}>
+            <ActionIcon variant="default" aria-label="Предыдущая неделя" onClick={prevWeek} className="mutedBtn">
               <IconChevronLeft size={20} />
             </ActionIcon>
             <Text fw={700} size="md" className="weekName">
               {isUpper ? 'Верхняя неделя' : 'Нижняя неделя'}
             </Text>
-            <ActionIcon variant="light" aria-label="Следующая неделя" onClick={nextWeek}>
+            <ActionIcon variant="default" aria-label="Следующая неделя" onClick={nextWeek} className="mutedBtn">
               <IconChevronRight size={20} />
             </ActionIcon>
           </Group>
           <Button
             size="xs"
-            variant="light"
-            className="todayBtn"
+            variant="default"
+            className={isTodayView ? 'todayBtn mutedBtn todayHidden' : 'todayBtn mutedBtn'}
             leftSection={<IconCalendar size={14} />}
             onClick={goToday}
-            // Всегда держим кнопку в разметке, но прячем её, когда мы уже на «сегодня»,
-            // чтобы высота шапки не менялась и макет не «прыгал».
-            style={{ visibility: isTodayView ? 'hidden' : 'visible' }}
           >
             Сегодня
           </Button>
@@ -304,24 +301,14 @@ export default function Timetable() {
               <button
                 key={day}
                 type="button"
-                className="dayChip"
-                style={{
-                  backgroundColor: isChanged
-                    ? 'var(--mantine-color-yellow-light)'
-                    : isSelected
-                      ? 'var(--mantine-color-blue-filled)'
-                      : isCurrentWeek && isToday
-                        ? 'var(--mantine-color-blue-light)'
-                        : 'var(--mantine-color-default-hover)',
-                  color: isChanged
-                    ? 'var(--mantine-color-yellow-light-color)'
-                    : isSelected
-                      ? 'var(--mantine-color-white)'
-                      : isCurrentWeek && isToday
-                        ? 'var(--mantine-color-blue-light-color)'
-                        : 'var(--mantine-color-text)',
-                  boxShadow: isSelected ? 'inset 0 -3px 0 0 var(--mantine-color-blue-filled)' : 'none',
-                }}
+                className={[
+                  'dayChip',
+                  isCurrentWeek && isToday ? 'dayToday' : '',
+                  isSelected ? 'daySelected' : '',
+                  isChanged ? 'dayChanged' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
                 onClick={() => setSelectedDay(day)}
                 aria-pressed={isSelected}
               >
