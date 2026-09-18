@@ -294,10 +294,13 @@
   font-size: 12px;
   font-weight: 700;
   margin-top: 2px;
+  margin-left: 6px;
   padding: 1px 8px;
   border-radius: var(--mantine-radius-sm);
   background: var(--mantine-primary-color-light);
   color: var(--mantine-primary-color-light-color);
+  /* Тег стоит в одной строке с названием и форматом занятия */
+  white-space: nowrap;
 }
 
 @media (max-width: 420px) {

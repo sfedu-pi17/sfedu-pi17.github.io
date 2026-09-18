@@ -372,8 +372,8 @@ export default function Timetable() {
                       <div className="subjectName">
                         {entry.discipline}
                         {entry.format && <span className="formatText"> ({entry.format})</span>}
+                        {entry.subgroup && <span className="subgroupText">{entry.subgroup}</span>}
                       </div>
-                      {entry.subgroup && <div className="subgroupText">{entry.subgroup}</div>}
                       {entry.teacher && <div className="subjectTeacher">{formatTeacher(entry.teacher)}</div>}
                     </>
                   ) : (
