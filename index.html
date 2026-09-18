@@ -6,27 +6,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>schedule</title>
 
-    <!-- Тёмный фон по умолчанию, чтобы до загрузки JS не мигало белым -->
-    <style>
-      html {
-        background-color: #242424;
-      }
-    </style>
+    <!-- Ставим data-mantine-color-scheme на <html> до первой отрисовки, чтобы
+         не мигало неверным фоном. Это тот же код, что у Mantine
+         <ColorSchemeScript defaultColorScheme="auto" />: читается ключ
+         mantine-color-scheme-value (соответствует localStorageColorSchemeManager).
+         Атрибута достаточно — фон body сам заполнит весь холст. -->
     <script>
-      // Подгоняем фон под сохранённую/системную тему до первой отрисовки,
-      // чтобы у светлой темы не мигало тёмным.
       (function () {
-        var dark = true;
         try {
-          var saved = localStorage.getItem('mantine-color-scheme');
-          dark =
-            saved === 'dark' ||
-            (saved !== 'light' &&
-              (!window.matchMedia || window.matchMedia('(prefers-color-scheme: dark)').matches));
+          var saved = window.localStorage.getItem('mantine-color-scheme-value');
+          var colorScheme = saved === 'light' || saved === 'dark' || saved === 'auto' ? saved : 'auto';
+          var computedColorScheme =
+            colorScheme !== 'auto'
+              ? colorScheme
+              : window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light';
+          document.documentElement.setAttribute('data-mantine-color-scheme', computedColorScheme);
         } catch (e) {
-          /* storage недоступен — оставляем тёмный по умолчанию */
+          /* storage недоступен — полагаемся на дефолт Mantine */
         }
-        document.documentElement.style.backgroundColor = dark ? '#242424' : '#ffffff';
       })();
     </script>
   </head>
