@@ -8,8 +8,8 @@ export default function App() {
     <div>
       <Group justify="space-between" p="md">
         <Group gap="xs">
-          <Title order={2}>
-            Расписание занятий
+          <Title order={3}>
+            Расписание
           </Title>
         </Group>
         <ThemeMenu />
