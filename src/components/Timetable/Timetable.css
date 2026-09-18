@@ -135,6 +135,26 @@
   text-align: left;
 }
 
+/* Заголовки — единый приглушённый стиль, чтобы не отвлекали от данных */
+.scheduleTable th {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--mantine-color-dimmed);
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.scheduleTable th.colNum,
+.scheduleTable th.colTime,
+.scheduleTable th.colAud {
+  font-weight: 500;
+  color: var(--mantine-color-dimmed);
+}
+
+.scheduleTable th.colNum {
+  text-align: center;
+}
+
 .scheduleTable .colNum {
   width: 34px;
   text-align: center;
@@ -172,6 +192,13 @@
 
 .scheduleTable td {
   transition: background-color 0.15s ease;
+}
+
+/* Строки расписания (пары) — минимальная высота 105px. У table-cell min-height не работает,
+   поэтому height+min-height задают минимальную высоту (строка растит с контентом, но не сожмётся). */
+.scheduleTable tbody td {
+  min-height: 80px;
+  height: 80px;
 }
 
 /* Идущая сейчас пара */
