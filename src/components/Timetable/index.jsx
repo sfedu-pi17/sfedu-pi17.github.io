@@ -29,6 +29,19 @@ const DAY_LABELS = {
   сб: 'Сб',
 };
 
+// Время пары «8:00 - 9:35» разбито на начало и конец, чтобы на узких экранах
+// медиазапрос мог свернуть их в столбик и спрятать дефис.
+function TimeRange({ value }) {
+  const [start, end] = String(value ?? '').split(' - ');
+  return (
+    <>
+      <span className="timeStart">{start}</span>
+      {end && <span className="timeSep">–</span>}
+      {end && <span className="timeEnd">{end}</span>}
+    </>
+  );
+}
+
 // Однострочный diff поля: старое (красное, зачёркнутое) -> новое (зелёное).
 // Пустую сторону не выводим: если старого нет — не показываем красное,
 // если нового нет — не показываем зелёное.
@@ -341,7 +354,10 @@ export default function Timetable() {
             <div role="columnheader" className="colNum">№</div>
             <div role="columnheader" className="colTime">Время</div>
             <div role="columnheader" className="subjectCell">Дисциплина</div>
-            <div role="columnheader" className="colAud">Аудитория</div>
+            <div role="columnheader" className="colAud">
+              <span className="audFull">Аудитория</span>
+              <span className="audShort">Ауд.</span>
+            </div>
           </div>
           {Array.from({ length: 6 }, (_, i) => {
             const number = i + 1;
@@ -362,7 +378,7 @@ export default function Timetable() {
             return (
               <div key={number} role="row" className={classes}>
                 <div role="cell" className="colNum">{number}</div>
-                <div role="cell" className="colTime">{LECTURE_TIMES[number]}</div>
+                <div role="cell" className="colTime"><TimeRange value={LECTURE_TIMES[number]} /></div>
                 <div role="cell" className="subjectCell">
                   {cancelled && <span className="cancelBadge">отменена</span>}
                   {change ? (

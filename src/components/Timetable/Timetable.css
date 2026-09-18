@@ -205,11 +205,20 @@
   line-height: 1.3;
 }
 
+.scheduleRow > .colTime .timeSep {
+  margin: 0 4px;
+}
+
 .scheduleHead > .colAud,
 .scheduleRow > .colAud {
   white-space: nowrap;
   text-align: right;
   color: var(--mantine-color-dimmed);
+}
+
+/* Сокращённая подпись «Ауд.» показывается только на узких экранах */
+.scheduleHead > .colAud .audShort {
+  display: none;
 }
 
 /* Числовая аудитория — жирная, обычным цветом текста (чёрный/белый по теме);
@@ -286,7 +295,6 @@
   font-size: 11px;
   font-weight: 500;
   color: var(--mantine-color-dimmed);
-  white-space: nowrap;
 }
 
 .subgroupText {
@@ -307,14 +315,28 @@
   .scheduleHead,
   .scheduleHead > .colTime,
   .scheduleRow {
-    grid-template-columns: 34px 78px 1fr 66px;
+    grid-template-columns: 34px 48px 1fr 46px;
   }
   .scheduleRow > .colTime {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
     font-size: 11px;
+  }
+  .scheduleRow > .colTime .timeSep {
+    display: none;
+    margin: 0;
   }
   .scheduleHead > .colAud,
   .scheduleRow > .colAud {
     font-size: 11px;
+  }
+  .scheduleHead > .colAud .audFull {
+    display: none;
+  }
+  .scheduleHead > .colAud .audShort {
+    display: inline;
   }
   .subjectName {
     font-size: 12px;
