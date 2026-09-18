@@ -122,6 +122,7 @@ function entriesEqual(a, b) {
     a.teacher === b.teacher &&
     a.audience === b.audience &&
     a.subgroup === b.subgroup &&
+    a.cancelDate === b.cancelDate &&
     a.week === b.week &&
     a.day === b.day &&
     a.lectureNumber === b.lectureNumber
