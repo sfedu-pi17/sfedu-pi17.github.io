@@ -1,7 +1,19 @@
 /*
-  Сброс пользовательских стилей убран: Mantine сам подключает
-  baseline + global сброс через @mantine/core/styles.css
-  (box-sizing, body { margin: 0; ... }, сброс шрифтов и т.д.).
-  Файл остаётся как точка входа для глобальных переопределений,
-  которых сейчас нет.
+  Mantine сам делает сброс через @mantine/core/styles.css
 */
+
+*{
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  min-height: 100dvh;
+  width: 100%;
+  position: relative;
+  background-color: inherit;
+
+  display: flex;
+  flex-direction: column;
+}

@@ -126,7 +126,7 @@
   width: 100%;
   flex: 1;
   display: grid;
-  grid-template-rows: 36px repeat(6, 1fr);
+  grid-template-rows: 32px repeat(6, 1fr);
   min-height: 0;
 }
 
@@ -134,22 +134,17 @@
 .scheduleHead,
 .scheduleRow {
   display: grid;
-  grid-template-columns: 34px 92px 1fr 78px;
+  grid-template-columns: 32px 88px 1fr 88px;
   min-height: 0;
 }
 
+.scheduleHead,
+.scheduleRow:not(:last-child) {
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+
+
 /* Растягиваем таблицу и убираем прокрутку у карточки, чтобы строки заполнили экран */
-.appRoot {
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-}
-.appBody {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
 .timetableContainer {
   flex: 1;
   display: flex;
@@ -166,10 +161,15 @@
 /* Ячейки */
 .scheduleHead > div,
 .scheduleRow > div {
-  border-bottom: 1px solid var(--mantine-color-default-border);
   padding: 8px 6px;
-  overflow: auto;
+  overflow: hidden;
   min-width: 0;
+}
+
+/* Длинные названия дисциплин переносятся, а не режутся по ширине ячейки */
+.scheduleRow > .subjectCell {
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Заголовок — приглушённый единый стиль, чтобы не отвлекал от данных */
@@ -296,10 +296,10 @@
 
 @media (max-width: 420px) {
   .scheduleHead,
+  .scheduleHead > .colTime,
   .scheduleRow {
     grid-template-columns: 34px 78px 1fr 66px;
   }
-  .scheduleHead > .colTime,
   .scheduleRow > .colTime {
     font-size: 11px;
   }

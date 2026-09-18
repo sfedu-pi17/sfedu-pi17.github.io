@@ -236,7 +236,7 @@ export default function Timetable() {
   // Нет ни кэша, ни свежих данных и произошла ошибка — показываем сообщение о сбое.
   if (!schedule.length && error) {
     return (
-      <Container size="md" mt="md" px="xs">
+      <Container size="md" mt="md" px="0">
         <Card shadow="lg" withBorder radius="md" p="xl">
           <Group justify="center" gap="sm">
             <IconAlertCircle size={28} color="var(--mantine-color-red-6)" />
@@ -253,7 +253,7 @@ export default function Timetable() {
   }
 
   return (
-    <Container size="md" mt="md" px="xs" className="timetableContainer">
+    <Container size="md" px="0" className="timetableContainer">
       <Card shadow="lg" withBorder radius="md" p="sm" className="timetableCard">
         {/* Уведомление об изменениях в расписании */}
         {showNotif && (

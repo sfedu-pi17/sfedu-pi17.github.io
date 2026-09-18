@@ -1,3 +1,21 @@
+/* Контент заполняет ровно высоту экрана и скроллится внутри, чтобы шапка
+   оставалась на месте, как у мобильного приложения, а не тянулась страница. */
+.appMain {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Общая серая «оболочка» для шапки и фона: карточка расписания (белая, с тенью)
+   лежит поверх, а разделителя между панелью и контентом нет (withBorder={false}). */
+.appMain,
+.appHeader {
+  background-color: var(--mantine-color-gray-2);
+}
+[data-mantine-color-scheme='dark'] .appMain,
+[data-mantine-color-scheme='dark'] .appHeader {
+  background-color: var(--mantine-color-dark-7);
+}
+
 .counter {
   font-size: 16px;
   padding: 5px 10px;

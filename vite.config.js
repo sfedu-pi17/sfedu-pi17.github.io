@@ -1,3 +1,5 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { execSync } from 'node:child_process'
@@ -14,9 +16,16 @@ function buildHash() {
 }
 
 // https://vite.dev/config/
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
 export default defineConfig({
   plugins: [react()],
   base: '/',
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src'), // правило проекта: импорты через @/*
+    },
+  },
   server: {
     host: '0.0.0.0', // доступ с других устройств по локальной сети
   },
