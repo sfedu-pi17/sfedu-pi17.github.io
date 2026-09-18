@@ -56,7 +56,7 @@
 }
 
 .weekName {
-  min-width: 96px;
+  width: 70px;
   text-align: center;
   white-space: nowrap;
 }

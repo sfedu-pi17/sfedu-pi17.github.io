@@ -304,7 +304,7 @@ export default function Timetable() {
               <IconChevronLeft size={20} />
             </ActionIcon>
             <Text fw={700} size="md" className="weekName">
-              {isUpper ? 'Верхняя неделя' : 'Нижняя неделя'}
+              {isUpper ? 'Верхняя' : 'Нижняя'}
             </Text>
             <ActionIcon variant="default" aria-label="Следующая неделя" onClick={nextWeek} className="mutedBtn">
               <IconChevronRight size={20} />
