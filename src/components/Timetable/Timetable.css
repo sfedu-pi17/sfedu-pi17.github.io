@@ -252,6 +252,18 @@
   box-shadow: inset 3px 0 0 var(--mantine-color-yellow-7);
 }
 
+.scheduleRow.cancelledPair > .colAud,
+.scheduleRow.cancelledPair > .subjectCell > :not(.cancelBadge) {
+  opacity: 0.3;
+  text-decoration: line-through;
+}
+
+.cancelBadge {
+  color: var(--mantine-color-red-6);
+  font-weight: 700;
+  font-size: 14px;
+}
+
 /* Diff внутри пары: красное — удалено, зелёное — появилось */
 .diffOld {
   color: var(--mantine-color-red-6);

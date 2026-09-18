@@ -23,6 +23,7 @@ describe('parseScheduleCsv', () => {
       teacher: 'индивидуально',
       audience: 'MS Teams',
       subgroup: '',
+      cancelDate: '',
     });
 
     expect(rows[1].format).toBe('практ');

@@ -66,6 +66,9 @@ function normalizeRecord(rec) {
     teacher: rec.teacher?.trim() || '',
     audience: rec.audience?.trim() || '',
     subgroup: rec.subgroup?.trim() || '',
+    // Дата отмены пары (заполнена — пара отменена в этот день). Колонка может называться
+    // cancel_date или cancelDate.
+    cancelDate: (rec.cancel_date ?? rec.cancelDate ?? '').trim(),
   };
 }
 

@@ -12,6 +12,7 @@ import {
   buildReviewSteps,
   getDayDates,
   isSummerBreak,
+  isCancelledOn,
 } from '../../pkg/domain.js';
 import { parseScheduleCsv } from '../../pkg/serialization.js';
 import { loadScheduleCache, saveScheduleCache } from '../../pkg/storage.js';
@@ -134,6 +135,7 @@ export default function Timetable() {
     let cancelled = false;
     fetchScheduleCsv()
       .then((csvText) => {
+        console.log(csvText)
         if (cancelled) return;
         const data = parseScheduleCsv(csvText);
         saveScheduleCache(data);
@@ -254,17 +256,19 @@ export default function Timetable() {
               <Text size="sm" fw={600}>В расписании есть изменения</Text>
             </Group>
             <Group gap="xs">
+              {/* «Далее» скрываем, когда изменений больше нет */}
+              {(!isReviewing || hasNextChangedDay) && (
+                <Button
+                  size="xs"
+                  variant="filled"
+                  color="blue"
+                  onClick={isReviewing ? nextDay : startReview}
+                >
+                  {isReviewing ? 'Далее' : 'Показать'}
+                </Button>
+              )}
               <Button size="xs" variant="default" onClick={dismissChanges} className="mutedBtn">
                 ОК
-              </Button>
-              <Button
-                size="xs"
-                variant="default"
-                className="mutedBtn"
-                disabled={isReviewing && !hasNextChangedDay}
-                onClick={isReviewing ? nextDay : startReview}
-              >
-                {isReviewing ? 'Далее' : 'Показать'}
               </Button>
             </Group>
           </Group>
@@ -336,10 +340,12 @@ export default function Timetable() {
             const summerBreak = isSummerBreak(dayDates[selectedDay]);
             const entry = summerBreak ? null : weekDayMap[selectedDay][number];
             const change = summerBreak ? null : pairChange(selectedDay, number);
+            const cancelled = isCancelledOn(entry?.cancelDate, dayDates[selectedDay]);
             const classes = [
               'scheduleRow',
               number === currentLecture ? 'currentLecture' : null,
               change ? 'changedPair' : null,
+              cancelled ? 'cancelledPair' : null,
             ]
               .filter(Boolean)
               .join(' ');
@@ -348,6 +354,7 @@ export default function Timetable() {
                 <div role="cell" className="colNum">{number}</div>
                 <div role="cell" className="colTime">{LECTURE_TIMES[number]}</div>
                 <div role="cell" className="subjectCell">
+                  {cancelled && <span className="cancelBadge">отменена</span>}
                   {change ? (
                     <ChangedDiscipline change={change} />
                   ) : entry?.discipline ? (

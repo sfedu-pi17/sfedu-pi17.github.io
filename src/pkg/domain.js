@@ -74,6 +74,30 @@ export function isSummerBreak(date) {
   return m === 8 && date.getDate() === 1;
 }
 
+// Пара отменена, если cancelDate совпадает с датой показа. Поддерживаем форматы
+// ISO (yyyy-mm-dd), dd.mm.yyyy, dd.mm.yy (двузначный год) и dd.mm (без года).
+export function isCancelledOn(cancelDate, date) {
+  if (!cancelDate) return false;
+  const s = String(cancelDate).trim();
+  let d, m, y;
+  let match = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (match) {
+    [y, m, d] = [+match[1], +match[2], +match[3]];
+  } else if ((match = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/))) {
+    [d, m, y] = [+match[1], +match[2], +match[3]];
+  } else if ((match = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2})$/))) {
+    [d, m, y] = [+match[1], +match[2], +match[3]];
+    y = y <= 69 ? 2000 + y : 1900 + y;
+  } else if ((match = s.match(/^(\d{1,2})\.(\d{1,2})$/))) {
+    [d, m] = [+match[1], +match[2]];
+    y = null;
+  } else {
+    return false;
+  }
+  if (y !== null && y !== date.getFullYear()) return false;
+  return m === date.getMonth() + 1 && d === date.getDate();
+}
+
 // Номер пары, которая идёт прямо сейчас (если текущее время попадает в её диапазон),
 // иначе null.
 export function getCurrentLectureNumber(date = new Date()) {
