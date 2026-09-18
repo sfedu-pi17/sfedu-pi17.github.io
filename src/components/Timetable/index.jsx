@@ -241,8 +241,8 @@ export default function Timetable() {
   }
 
   return (
-    <Container size="md" mt="md" px="xs">
-      <Card shadow="lg" withBorder radius="md" p="sm">
+    <Container size="md" mt="md" px="xs" className="timetableContainer">
+      <Card shadow="lg" withBorder radius="md" p="sm" className="timetableCard">
         {/* Уведомление об изменениях в расписании */}
         {showNotif && (
           <Group className="changesBanner" justify="space-between" align="center" gap="xs">
@@ -318,60 +318,57 @@ export default function Timetable() {
           })}
         </Group>
 
-        {/* Таблица расписания на выбранный день */}
-        <table className="scheduleTable">
-          <thead>
-            <tr>
-              <th className="colNum">№</th>
-              <th className="colTime">Время</th>
-              <th>Дисциплина</th>
-              <th className="colAud">Аудитория</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Array.from({ length: 6 }, (_, i) => {
-              const number = i + 1;
-              // Летом (июль–август) пар нет — не показываем их даже если тип
-              // недели совпадает с учебной.
-              const summerBreak = isSummerBreak(dayDates[selectedDay]);
-              const entry = summerBreak ? null : weekDayMap[selectedDay][number];
-              const change = summerBreak ? null : pairChange(selectedDay, number);
-              const classes = [
-                number === currentLecture ? 'currentLecture' : null,
-                change ? 'changedPair' : null,
-              ]
-                .filter(Boolean)
-                .join(' ');
-              return (
-                <tr key={number} className={classes || undefined}>
-                  <td className="colNum">{number}</td>
-                  <td className="colTime">{LECTURE_TIMES[number]}</td>
-                  <td>
-                    {change ? (
-                      <ChangedDiscipline change={change} />
-                    ) : entry?.discipline ? (
-                      <>
-                        <div className="subjectName">
-                          {entry.discipline}
-                          {entry.format && <span className="formatText"> ({entry.format})</span>}
-                        </div>
-                        {entry.subgroup && <div className="subgroupText">{entry.subgroup}</div>}
-                        {entry.teacher && <div className="subjectTeacher">{entry.teacher}</div>}
-                      </>
-                    ) : (
-                      <Text size="sm" c="dimmed">
-                        —
-                      </Text>
-                    )}
-                  </td>
-                  <td className="colAud">
-                    {change ? <ChangedAudience change={change} /> : entry?.audience || ''}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        {/* Расписание на выбранный день: grid-разметка (вместо table) */}
+        <div className="scheduleTable" role="table">
+          <div className="scheduleHead" role="row">
+            <div role="columnheader" className="colNum">№</div>
+            <div role="columnheader" className="colTime">Время</div>
+            <div role="columnheader" className="subjectCell">Дисциплина</div>
+            <div role="columnheader" className="colAud">Аудитория</div>
+          </div>
+          {Array.from({ length: 6 }, (_, i) => {
+            const number = i + 1;
+            // Летом (июль–август) пар нет — не показываем их даже если тип
+            // недели совпадает с учебной.
+            const summerBreak = isSummerBreak(dayDates[selectedDay]);
+            const entry = summerBreak ? null : weekDayMap[selectedDay][number];
+            const change = summerBreak ? null : pairChange(selectedDay, number);
+            const classes = [
+              'scheduleRow',
+              number === currentLecture ? 'currentLecture' : null,
+              change ? 'changedPair' : null,
+            ]
+              .filter(Boolean)
+              .join(' ');
+            return (
+              <div key={number} role="row" className={classes}>
+                <div role="cell" className="colNum">{number}</div>
+                <div role="cell" className="colTime">{LECTURE_TIMES[number]}</div>
+                <div role="cell" className="subjectCell">
+                  {change ? (
+                    <ChangedDiscipline change={change} />
+                  ) : entry?.discipline ? (
+                    <>
+                      <div className="subjectName">
+                        {entry.discipline}
+                        {entry.format && <span className="formatText"> ({entry.format})</span>}
+                      </div>
+                      {entry.subgroup && <div className="subgroupText">{entry.subgroup}</div>}
+                      {entry.teacher && <div className="subjectTeacher">{entry.teacher}</div>}
+                    </>
+                  ) : (
+                    <Text size="sm" c="dimmed">
+                      —
+                    </Text>
+                  )}
+                </div>
+                <div role="cell" className="colAud">
+                  {change ? <ChangedAudience change={change} /> : entry?.audience || ''}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </Card>
 
       {/* Всплывающий индикатор обновления — поверх экрана, справа снизу, не блокирует и не двигает разметку */}

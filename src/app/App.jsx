@@ -5,7 +5,7 @@ import '@mantine/core/styles.css';
 
 export default function App() {
   return (
-    <div>
+    <div className="appRoot">
       <Group justify="space-between" p="md">
         <Group gap="xs">
           <Title order={3}>
@@ -14,7 +14,9 @@ export default function App() {
         </Group>
         <ThemeMenu />
       </Group>
-      <Timetable />
+      <div className="appBody">
+        <Timetable />
+      </div>
     </div>
   );
 }
