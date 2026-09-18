@@ -205,8 +205,10 @@
   line-height: 1.3;
 }
 
+.scheduleHead > .colAud,
 .scheduleRow > .colAud {
   white-space: nowrap;
+  text-align: right;
   color: var(--mantine-color-dimmed);
 }
 
