@@ -82,6 +82,9 @@ function ChangedAudience({ change }) {
 const formatDayDate = (d) =>
   `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
 
+// Аудитория считается числовой, если состоит только из цифр и разделителей (пробел, дефис).
+const isNumericAudience = (s) => /^[\d\s-]+$/.test(String(s ?? '').trim()) && String(s ?? '').trim() !== '';
+
 export default function Timetable() {
   const [schedule, setSchedule] = useState(() => loadScheduleCache());
   // Догрузка свежих данных: показывает компактный индикатор (тост), не блокируя интерфейс.
@@ -363,7 +366,13 @@ export default function Timetable() {
                   )}
                 </div>
                 <div role="cell" className="colAud">
-                  {change ? <ChangedAudience change={change} /> : entry?.audience || ''}
+                  {change ? (
+                    <ChangedAudience change={change} />
+                  ) : (
+                    <span className={isNumericAudience(entry?.audience) ? 'audNum' : 'audText'}>
+                      {entry?.audience || ''}
+                    </span>
+                  )}
                 </div>
               </div>
             );

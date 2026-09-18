@@ -189,7 +189,8 @@
   text-align: center;
   color: var(--mantine-color-dimmed);
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .scheduleRow > .colTime {
@@ -203,6 +204,18 @@
 .scheduleRow > .colAud {
   white-space: nowrap;
   color: var(--mantine-color-dimmed);
+}
+
+/* Числовая аудитория — жирная, обычным цветом текста (чёрный/белый по теме);
+   текстовая — уменьшенным шрифтом */
+.scheduleRow > .colAud .audNum {
+  font-weight: 700;
+  color: var(--mantine-color-text);
+}
+
+.scheduleRow > .colAud .audText {
+  font-size: 11px;
+  font-weight: 500;
 }
 
 .subjectName {
