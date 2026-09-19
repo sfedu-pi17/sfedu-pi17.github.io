@@ -306,7 +306,7 @@ export default function Timetable() {
 
   return (
     <Container size="md" px="0" className="timetableContainer">
-      <Card shadow="lg" withBorder radius="md" py="sm" px="0" className="timetableCard">
+      <Card shadow="lg" withBorder radius="xl" py="sm" px="0" className="timetableCard">
         {/* Уведомление об изменениях в расписании */}
         {showNotif && (
           <Group className="changesBanner" justify="space-between" align="center" gap="xs">
