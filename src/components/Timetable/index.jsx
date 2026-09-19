@@ -55,9 +55,21 @@ export default function Timetable() {
 
   // Текущее время: обновляем, чтобы метка текущей пары не устаревала.
   const [now, setNow] = useState(() => new Date());
+  // Счётчик «до начала/до конца» должен обновляться ровно в начале каждой минуты, а не
+  // каждые 30с. Первый тик — setTimeout до круглой минуты, дальше — setInterval в 60с:
+  // в момент перехода на новую минуту мы уже точно в её начале.
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 30_000);
-    return () => clearInterval(id);
+    let intervalId;
+    const syncMinute = () => {
+      setNow(new Date());
+      intervalId = setInterval(() => setNow(new Date()), 60_000);
+    };
+    const msToNextMinute = 60_000 - (Date.now() % 60_000);
+    const timeoutId = setTimeout(syncMinute, msToNextMinute);
+    return () => {
+      clearTimeout(timeoutId);
+      if (intervalId) clearInterval(intervalId);
+    };
   }, []);
 
   // Автоскрытие тоста об ошибке через 10 секунд.
