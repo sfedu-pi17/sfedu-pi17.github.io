@@ -1,208 +1,26 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Card, Text, Loader, Container, ActionIcon, Group, Button } from '@mantine/core';
-import { IconChevronLeft, IconChevronRight, IconAlertCircle } from '@tabler/icons-react';
+import { Card, Text, Loader, Container, Group } from '@mantine/core';
+import { IconAlertCircle } from '@tabler/icons-react';
 import {
-  DAY_ORDER,
-  LECTURE_TIMES,
   getCurrentWeekType,
   getTodayDayCode,
   getLectureTimeState,
-  getMinutesRemaining,
   shiftDay,
   diffSchedule,
   groupByWeekDay,
   buildReviewSteps,
   getDayDates,
-  isSummerBreak,
   isCancelledOn,
-  formatTeacher,
-} from '../../pkg/domain.js';
-import { parseScheduleCsv } from '../../pkg/serialization.js';
-import { loadScheduleCache, saveScheduleCache } from '../../pkg/storage.js';
-import { fetchScheduleCsv } from '../../pkg/api.js';
+} from '@/pkg/domain.js';
+import { parseScheduleCsv } from '@/pkg/serialization.js';
+import { loadScheduleCache, saveScheduleCache } from '@/pkg/storage.js';
+import { fetchScheduleCsv } from '@/pkg/api.js';
+import { weekForOffset } from './utils.js';
+import WeekHeader from './WeekHeader.jsx';
+import DayBar from './DayBar.jsx';
+import ChangesBanner from './ChangesBanner.jsx';
+import PaneRows from './PaneRows.jsx';
 import './Timetable.css';
-
-const DAY_LABELS = {
-  пн: 'Пн',
-  вт: 'Вт',
-  ср: 'Ср',
-  чт: 'Чт',
-  пт: 'Пт',
-  сб: 'Сб',
-};
-
-// Время пары «8:00 - 9:35» разбито на начало и конец, чтобы на узких экранах
-// медиазапрос мог свернуть их в столбик и спрятать дефис.
-// highlight: 'start' | 'end' — жирным время начала (пара ещё не началась) или
-// конца (пара уже идёт). Время обёрнуто в .timeRange, чтобы ячейка раскладывала
-// его в своей колонке, а подпись про остаток времени рендерилась отдельно.
-function TimeRange({ value, highlight }) {
-  const [start, end] = String(value ?? '').split(' - ');
-  const highlightStart = highlight === 'start';
-  const highlightEnd = highlight === 'end';
-  return (
-    <span className="timeRange">
-      <span className={highlightStart ? 'timeStart timeActive' : 'timeStart'}>{start}</span>
-      {end && <span className="timeSep">–</span>}
-      {end && <span className={highlightEnd ? 'timeEnd timeActive' : 'timeEnd'}>{end}</span>}
-    </span>
-  );
-}
-
-// Однострочный diff поля: старое (красное, зачёркнутое) -> новое (зелёное).
-// Пустую сторону не выводим: если старого нет — не показываем красное,
-// если нового нет — не показываем зелёное.
-function DiffPair({ oldVal, newVal, fmt }) {
-  const showOld = !!oldVal;
-  const showNew = !!newVal;
-  if (!showOld && !showNew) return null;
-  const o = showOld && fmt ? fmt(oldVal) : oldVal;
-  const n = showNew && fmt ? fmt(newVal) : newVal;
-  return (
-    <span>
-      {showOld && <span className="diffOld">{o}</span>}
-      {showNew && <span className="diffNew">{n}</span>}
-    </span>
-  );
-}
-
-// Содержимое ячейки «Дисциплина» для изменившейся пары.
-function ChangedDiscipline({ change }) {
-  const { old: o, new: n } = change;
-
-  const field = (key, cls, fmt) => {
-    const ov = o?.[key] ?? '';
-    const nv = n?.[key] ?? '';
-    if (ov === nv) {
-      return nv ? <div key={key} className={cls}>{fmt ? fmt(nv) : nv}</div> : null;
-    }
-    return (
-      <div key={key} className={cls}>
-        <DiffPair oldVal={ov} newVal={nv} fmt={fmt} />
-      </div>
-    );
-  };
-
-  return (
-    <>
-      {field('discipline', 'subjectName')}
-      {field('format', 'formatText', (v) => `(${v})`)}
-      {field('subgroup', 'subgroupText')}
-      {field('teacher', 'subjectTeacher', formatTeacher)}
-    </>
-  );
-}
-
-// Содержимое ячейки «Аудитория» для изменившейся пары.
-function ChangedAudience({ change }) {
-  const { old: o, new: n } = change;
-  const ov = o?.audience ?? '';
-  const nv = n?.audience ?? '';
-  if (ov === nv) return nv ? <span>{nv}</span> : '';
-  return <DiffPair oldVal={ov} newVal={nv} />;
-}
-
-// Дата в формате дд.мм для подписи под днём недели.
-const formatDayDate = (d) =>
-  `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
-
-// Подпись под временем актуальной пары: «до конца Xч Yм» для идущей пары,
-// «до начала …» для следующей. Нулевые часы/минуты не выводим, секунды (0 минут)
-// не показываем вовсе.
-const formatRemainingLabel = (state, date) => {
-  const mins = getMinutesRemaining(state, date);
-  if (!mins) return null;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  const parts = [];
-  if (h) parts.push(`${h}ч`);
-  if (m) parts.push(`${m}м`);
-  const label = state.status === 'ongoing' ? 'до конца' : 'до начала';
-  return `${label} ${parts.join(' ')}`;
-};
-
-// Аудитория считается числовой, если состоит только из цифр и разделителей (пробел, дефис).
-const isNumericAudience = (s) => /^[\d\s-]+$/.test(String(s ?? '').trim()) && String(s ?? '').trim() !== '';
-
-// Тип недели (верхняя/нижняя) для произвольного сдвига: чётный сдвиг — та же неделя,
-// нечётный — противоположная. Нужен панелям карусели, которые живут в соседних неделях.
-const weekForOffset = (off, currentWeek) =>
-  off % 2 === 0 ? currentWeek : currentWeek === 'upper' ? 'lower' : 'upper';
-
-// Ряды одного дня (6 пар) для одной панели карусели. highlight — состояние текущей/
-// следующей пары, передаётся только средней панели (там, где выбранный день); у соседних
-// панелей его нет, поэтому без подсветки и подписи «до конца/начала».
-// dayChanged/изменения читаются по неделе конкретной панели (changes[pane.week]),
-// а не по глобальной — соседние недели могут содержать свой diff.
-function PaneRows({ pane, changes, now, highlight }) {
-  const { day, week, weekDayMap, dayDates } = pane;
-  const weekChanges = changes[week] || {};
-  const pairChange = (day, num) => weekChanges[day]?.[num] || null;
-  const lectureRemaining = highlight ? formatRemainingLabel(highlight, now) : null;
-
-  return Array.from({ length: 6 }, (_, i) => {
-    const number = i + 1;
-    // Летом (июль–август) пар нет — не показываем их даже если тип недели совпадает с учебной.
-    const summerBreak = isSummerBreak(dayDates[day]);
-    const entry = summerBreak ? null : weekDayMap[day][number];
-    const change = summerBreak ? null : pairChange(day, number);
-    const cancelled = isCancelledOn(entry?.cancelDate, dayDates[day]);
-    const classes = [
-      'scheduleRow',
-      number === highlight?.num ? 'currentLecture' : null,
-      change ? 'changedPair' : null,
-      cancelled ? 'cancelledPair' : null,
-    ]
-      .filter(Boolean)
-      .join(' ');
-    return (
-      <div key={number} role="row" className={classes}>
-        <div role="cell" className="colNumTime">
-          <span className="lectureNum">{number}</span>
-          <TimeRange
-            value={LECTURE_TIMES[number]}
-            highlight={
-              highlight?.num === number
-                ? highlight.status === 'ongoing'
-                  ? 'end'
-                  : 'start'
-                : null
-            }
-          />
-          {highlight?.num === number && <span className="timeRemaining">{lectureRemaining}</span>}
-        </div>
-        <div role="cell" className="subjectCell">
-          {cancelled && <span className="cancelBadge">отменена</span>}
-          {change ? (
-            <ChangedDiscipline change={change} />
-          ) : entry?.discipline ? (
-            <>
-              <div className="subjectName">
-                {entry.discipline}
-                {entry.format && <span className="formatText"> ({entry.format})</span>}
-                {entry.subgroup && <span className="subgroupText">{entry.subgroup}</span>}
-              </div>
-              {entry.teacher && <div className="subjectTeacher">{formatTeacher(entry.teacher)}</div>}
-            </>
-          ) : (
-            <Text size="sm" c="dimmed">
-              —
-            </Text>
-          )}
-        </div>
-        <div role="cell" className="colAud">
-          {change ? (
-            <ChangedAudience change={change} />
-          ) : (
-            <span className={isNumericAudience(entry?.audience) ? 'audNum' : 'audText'}>
-              {entry?.audience || ''}
-            </span>
-          )}
-        </div>
-      </div>
-    );
-  });
-}
 
 export default function Timetable() {
   const [schedule, setSchedule] = useState(() => loadScheduleCache());
@@ -474,86 +292,34 @@ export default function Timetable() {
       <Card shadow="lg" withBorder radius="xl" py="sm" px="0" className="timetableCard">
         {/* Уведомление об изменениях в расписании */}
         {showNotif && (
-          <Group className="changesBanner" justify="space-between" align="center" gap="xs">
-            <Group gap="xs">
-              <IconAlertCircle size={18} />
-              <Text size="sm" fw={600}>В расписании есть изменения</Text>
-            </Group>
-            <Group gap="xs">
-              {/* «Далее» скрываем, когда изменений больше нет */}
-              {(!isReviewing || hasNextChangedDay) && (
-                <Button
-                  size="xs"
-                  variant="filled"
-                  color="blue"
-                  onClick={isReviewing ? nextDay : startReview}
-                >
-                  {isReviewing ? 'Далее' : 'Показать'}
-                </Button>
-              )}
-              <Button size="xs" variant="default" onClick={dismissChanges} className="mutedBtn">
-                ОК
-              </Button>
-            </Group>
-          </Group>
+          <ChangesBanner
+            isReviewing={isReviewing}
+            hasNextChangedDay={hasNextChangedDay}
+            onShow={startReview}
+            onNext={nextDay}
+            onDismiss={dismissChanges}
+          />
         )}
 
         {/* Шапка: неделя по центру, «Сегодня» в правом углу */}
-        <Group className="weekHeader" wrap="nowrap" align="center" gap="xs">
-          <Group justify="flex-start" gap={6} className="weekToggle">
-            <ActionIcon
-              variant="default"
-              aria-label="Предыдущая неделя"
-              onClick={prevWeek}
-              disabled={isPrevDisabled}
-              className="mutedBtn"
-            >
-              <IconChevronLeft size={20} />
-            </ActionIcon>
-            <Text fw={700} size="md" className="weekName">
-              {isUpper ? 'Верхняя' : 'Нижняя'}
-            </Text>
-            <ActionIcon variant="default" aria-label="Следующая неделя" onClick={nextWeek} className="mutedBtn">
-              <IconChevronRight size={20} />
-            </ActionIcon>
-          </Group>
-          <Button
-            size="xs"
-            variant="default"
-            className={isTodayView ? 'todayBtn mutedBtn todayHidden' : 'todayBtn mutedBtn'}
-            onClick={goToday}
-          >
-            Сегодня
-          </Button>
-        </Group>
+        <WeekHeader
+          isUpper={isUpper}
+          isPrevDisabled={isPrevDisabled}
+          onPrevWeek={prevWeek}
+          onNextWeek={nextWeek}
+          isTodayView={isTodayView}
+          onGoToday={goToday}
+        />
 
         {/* Выбор дня недели; сегодняшний день подсвечен отдельно, изменённые — жёлтым */}
-        <Group gap={6} className="dayBar">
-          {DAY_ORDER.map((day) => {
-            const isToday = day === todayDay;
-            const isSelected = day === selectedDay;
-            const isChanged = dayChanged(day);
-            return (
-              <button
-                key={day}
-                type="button"
-                className={[
-                  'dayChip',
-                  isCurrentWeek && isToday && !isSelected ? 'dayToday' : '',
-                  isSelected ? 'daySelected' : '',
-                  isChanged ? 'dayChanged' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                onClick={() => setSelectedDay(day)}
-                aria-pressed={isSelected}
-              >
-                <span className="dayLabel">{DAY_LABELS[day]}</span>
-                <span className="dayDate">{formatDayDate(dayDates[day])}</span>
-              </button>
-            );
-          })}
-        </Group>
+        <DayBar
+          todayDay={todayDay}
+          selectedDay={selectedDay}
+          isCurrentWeek={isCurrentWeek}
+          dayDates={dayDates}
+          dayChanged={dayChanged}
+          onSelectDay={setSelectedDay}
+        />
 
         {/* Расписание на выбранный день: grid-разметка (вместо table) */}
         <div className="scheduleTable" role="table">
