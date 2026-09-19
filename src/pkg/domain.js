@@ -92,6 +92,18 @@ export function getDayDates(offset, date = new Date()) {
   );
 }
 
+// Соседний день расписания: delta +1 — следующий, −1 — предыдущий.
+// На краях недели (сб ↔ пн) сдвигает и weekOffset: сб -> пн следующей недели,
+// пн -> сб предыдущей. Неизвестный день возвращаем как есть.
+export function shiftDay(day, weekOffset, delta) {
+  const idx = DAY_ORDER.indexOf(day);
+  if (idx === -1) return { day, weekOffset };
+  const next = idx + delta;
+  if (next < 0) return { day: DAY_ORDER[DAY_ORDER.length - 1], weekOffset: weekOffset - 1 };
+  if (next >= DAY_ORDER.length) return { day: DAY_ORDER[0], weekOffset: weekOffset + 1 };
+  return { day: DAY_ORDER[next], weekOffset };
+}
+
 // Летние каникулы: пар нет с июля по 1 сентября включительно (месяцы 6, 7 и 8-го числа 1).
 export function isSummerBreak(date) {
   const m = date.getMonth();

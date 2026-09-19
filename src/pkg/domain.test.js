@@ -7,6 +7,7 @@ import {
   getCurrentLectureNumber,
   getLectureTimeState,
   getMinutesRemaining,
+  shiftDay,
   diffSchedule,
 } from './domain.js';
 
@@ -230,5 +231,27 @@ describe('diffSchedule', () => {
     ];
     const diff = diffSchedule(a, b);
     expect(diff.lower.сб[4].new.subgroup).toBe('группа I');
+  });
+});
+
+describe('shiftDay', () => {
+  it('обычное смещение внутри недели', () => {
+    expect(shiftDay('вт', 0, 1)).toEqual({ day: 'ср', weekOffset: 0 });
+    expect(shiftDay('вт', 0, -1)).toEqual({ day: 'пн', weekOffset: 0 });
+    expect(shiftDay('чт', -1, 1)).toEqual({ day: 'пт', weekOffset: -1 });
+  });
+
+  it('сб -> пн переходит на следующую неделю', () => {
+    expect(shiftDay('сб', 0, 1)).toEqual({ day: 'пн', weekOffset: 1 });
+    expect(shiftDay('сб', 2, 1)).toEqual({ day: 'пн', weekOffset: 3 });
+  });
+
+  it('пн -> сб переходит на предыдущую неделю', () => {
+    expect(shiftDay('пн', 0, -1)).toEqual({ day: 'сб', weekOffset: -1 });
+    expect(shiftDay('пн', 3, -1)).toEqual({ day: 'сб', weekOffset: 2 });
+  });
+
+  it('неизвестный день возвращается как есть', () => {
+    expect(shiftDay('вс', 0, 1)).toEqual({ day: 'вс', weekOffset: 0 });
   });
 });

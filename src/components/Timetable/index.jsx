@@ -8,6 +8,7 @@ import {
   getTodayDayCode,
   getLectureTimeState,
   getMinutesRemaining,
+  shiftDay,
   diffSchedule,
   groupByWeekDay,
   buildReviewSteps,
@@ -123,6 +124,86 @@ const formatRemainingLabel = (state, date) => {
 // Аудитория считается числовой, если состоит только из цифр и разделителей (пробел, дефис).
 const isNumericAudience = (s) => /^[\d\s-]+$/.test(String(s ?? '').trim()) && String(s ?? '').trim() !== '';
 
+// Тип недели (верхняя/нижняя) для произвольного сдвига: чётный сдвиг — та же неделя,
+// нечётный — противоположная. Нужен панелям карусели, которые живут в соседних неделях.
+const weekForOffset = (off, currentWeek) =>
+  off % 2 === 0 ? currentWeek : currentWeek === 'upper' ? 'lower' : 'upper';
+
+// Ряды одного дня (6 пар) для одной панели карусели. highlight — состояние текущей/
+// следующей пары, передаётся только средней панели (там, где выбранный день); у соседних
+// панелей его нет, поэтому без подсветки и подписи «до конца/начала».
+// dayChanged/изменения читаются по неделе конкретной панели (changes[pane.week]),
+// а не по глобальной — соседние недели могут содержать свой diff.
+function PaneRows({ pane, changes, now, highlight }) {
+  const { day, week, weekDayMap, dayDates } = pane;
+  const weekChanges = changes[week] || {};
+  const pairChange = (day, num) => weekChanges[day]?.[num] || null;
+  const lectureRemaining = highlight ? formatRemainingLabel(highlight, now) : null;
+
+  return Array.from({ length: 6 }, (_, i) => {
+    const number = i + 1;
+    // Летом (июль–август) пар нет — не показываем их даже если тип недели совпадает с учебной.
+    const summerBreak = isSummerBreak(dayDates[day]);
+    const entry = summerBreak ? null : weekDayMap[day][number];
+    const change = summerBreak ? null : pairChange(day, number);
+    const cancelled = isCancelledOn(entry?.cancelDate, dayDates[day]);
+    const classes = [
+      'scheduleRow',
+      number === highlight?.num ? 'currentLecture' : null,
+      change ? 'changedPair' : null,
+      cancelled ? 'cancelledPair' : null,
+    ]
+      .filter(Boolean)
+      .join(' ');
+    return (
+      <div key={number} role="row" className={classes}>
+        <div role="cell" className="colNumTime">
+          <span className="lectureNum">{number}</span>
+          <TimeRange
+            value={LECTURE_TIMES[number]}
+            highlight={
+              highlight?.num === number
+                ? highlight.status === 'ongoing'
+                  ? 'end'
+                  : 'start'
+                : null
+            }
+          />
+          {highlight?.num === number && <span className="timeRemaining">{lectureRemaining}</span>}
+        </div>
+        <div role="cell" className="subjectCell">
+          {cancelled && <span className="cancelBadge">отменена</span>}
+          {change ? (
+            <ChangedDiscipline change={change} />
+          ) : entry?.discipline ? (
+            <>
+              <div className="subjectName">
+                {entry.discipline}
+                {entry.format && <span className="formatText"> ({entry.format})</span>}
+                {entry.subgroup && <span className="subgroupText">{entry.subgroup}</span>}
+              </div>
+              {entry.teacher && <div className="subjectTeacher">{formatTeacher(entry.teacher)}</div>}
+            </>
+          ) : (
+            <Text size="sm" c="dimmed">
+              —
+            </Text>
+          )}
+        </div>
+        <div role="cell" className="colAud">
+          {change ? (
+            <ChangedAudience change={change} />
+          ) : (
+            <span className={isNumericAudience(entry?.audience) ? 'audNum' : 'audText'}>
+              {entry?.audience || ''}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  });
+}
+
 export default function Timetable() {
   const [schedule, setSchedule] = useState(() => loadScheduleCache());
   // Догрузка свежих данных: показывает компактный индикатор (тост), не блокируя интерфейс.
@@ -224,16 +305,100 @@ export default function Timetable() {
   const lectureState = isTodayView
     ? getLectureTimeState(now, (num) => isAvailableLecture(selectedDay, num))
     : null;
-  // Подпись под временем актуальной пары («начнётся/закончится через …»).
-  const lectureRemaining = lectureState ? formatRemainingLabel(lectureState, now) : null;
-
   // Изменённые дни/пары для текущей отображаемой недели.
   const weekChanges = changes[week] || {};
   const dayChanged = (day) => {
     const dd = weekChanges[day];
     return !!dd && Object.keys(dd).length > 0;
   };
-  const pairChange = (day, num) => weekChanges[day]?.[num] || null;
+
+  // --- Карусель дней: состояние жеста и соседние панели ---
+  const viewportRef = useRef(null);
+  const gestureRef = useRef(null); // { startX, startY, axis, dir, pointerId, lastDx }
+  const pendingCommitRef = useRef(null);
+  const [drag, setDrag] = useState({ x: 0 });
+  const [settling, setSettling] = useState(false);
+
+  // Соседние дни для панелей: [предыдущий, текущий, следующий]. Каждая панель — свой
+  // день/неделя со своими dayWeekMap/dayDates, даже если это соседняя неделя.
+  const panes = useMemo(() => {
+    const mk = (day, off) => {
+      const w = weekForOffset(off, currentWeek);
+      return { day, weekOffset: off, week: w, weekDayMap: groupByWeekDay(schedule, w), dayDates: getDayDates(off) };
+    };
+    const prev = shiftDay(selectedDay, weekOffset, -1);
+    const next = shiftDay(selectedDay, weekOffset, +1);
+    return [mk(prev.day, prev.weekOffset), mk(selectedDay, weekOffset), mk(next.day, next.weekOffset)];
+  }, [schedule, currentWeek, selectedDay, weekOffset]);
+
+  const onPointerDown = (e) => {
+    if (isReviewing || settling) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const width = viewportRef.current?.getBoundingClientRect().width || 0;
+    gestureRef.current = { startX: e.clientX, startY: e.clientY, axis: null, dir: null, pointerId: e.pointerId, lastDx: 0, width };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e) => {
+    const g = gestureRef.current;
+    if (!g || settling) return;
+    const dx = e.clientX - g.startX;
+    const dy = e.clientY - g.startY;
+    // Пока ось не зафиксирована — ждём, когда движение превысит мёртвую зону (~8px),
+    // и решаем: горизонтальный свайп или вертикальная прокрутка.
+    if (g.axis === null) {
+      if (Math.abs(dx) <= 8 && Math.abs(dy) <= 8) return;
+      g.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      if (g.axis === 'y') {
+        gestureRef.current = null;
+        e.currentTarget.releasePointerCapture(g.pointerId);
+        return; // вертикальный скролл карточки идёт нативно
+      }
+    }
+    if (g.axis === 'x') {
+      g.dir = dx < 0 ? 'next' : 'prev';
+      g.lastDx = dx;
+      // Клэмпим к ширине панели, чтобы при сильном уводе пальца не было пустого поля.
+      const clamped = Math.max(-g.width, Math.min(g.width, dx));
+      setDrag({ x: clamped }); // содержание следует за пальцем 1:1 (transition выключен)
+    }
+  };
+
+  const onPointerUp = () => {
+    const g = gestureRef.current;
+    gestureRef.current = null;
+    if (!g || settling || g.axis !== 'x') return;
+    const width = g.width || 0;
+    const threshold = Math.max(50, 0.25 * width);
+    let commit = null;
+    if (Math.abs(g.lastDx) > threshold) {
+      commit = shiftDay(selectedDay, weekOffset, g.dir === 'next' ? 1 : -1);
+      // Уважаем кламп недель: назад из самой нижней недели не уходим, а возвращаемся.
+      if (commit.weekOffset < 0) commit = null;
+    }
+    pendingCommitRef.current = commit;
+    setDrag({ x: commit ? (g.dir === 'next' ? -width : width) : 0 });
+    setSettling(true); // включает плавный transition к целевому сдвигу
+  };
+
+  const onPointerCancel = () => {
+    gestureRef.current = null;
+    pendingCommitRef.current = null;
+    setDrag({ x: 0 });
+    setSettling(false);
+  };
+
+  const onTransitionEnd = (e) => {
+    if (e.propertyName !== 'transform' || !settling) return;
+    const commit = pendingCommitRef.current;
+    pendingCommitRef.current = null;
+    if (commit) {
+      setSelectedDay(commit.day);
+      setWeekOffset(commit.weekOffset);
+    }
+    setSettling(false);
+    setDrag({ x: 0 });
+  };
 
   // Листание недель вперёд — бесконечно, назад — только до текущей.
   const prevWeek = () => setWeekOffset((o) => Math.max(o - 1, 0));
@@ -403,71 +568,38 @@ export default function Timetable() {
               <span className="audShort">Ауд.</span>
             </div>
           </div>
-          {Array.from({ length: 6 }, (_, i) => {
-            const number = i + 1;
-            // Летом (июль–август) пар нет — не показываем их даже если тип
-            // недели совпадает с учебной.
-            const summerBreak = isSummerBreak(dayDates[selectedDay]);
-            const entry = summerBreak ? null : weekDayMap[selectedDay][number];
-            const change = summerBreak ? null : pairChange(selectedDay, number);
-            const cancelled = isCancelledOn(entry?.cancelDate, dayDates[selectedDay]);
-            const classes = [
-              'scheduleRow',
-              number === lectureState?.num ? 'currentLecture' : null,
-              change ? 'changedPair' : null,
-              cancelled ? 'cancelledPair' : null,
-            ]
-              .filter(Boolean)
-              .join(' ');
-            return (
-              <div key={number} role="row" className={classes}>
-                <div role="cell" className="colNumTime">
-                  <span className="lectureNum">{number}</span>
-                  <TimeRange
-                    value={LECTURE_TIMES[number]}
-                    highlight={
-                      lectureState?.num === number
-                        ? lectureState.status === 'ongoing'
-                          ? 'end'
-                          : 'start'
-                        : null
-                    }
-                  />
-                  {lectureState?.num === number && (
-                    <span className="timeRemaining">{lectureRemaining}</span>
-                  )}
-                </div>
-                <div role="cell" className="subjectCell">
-                  {cancelled && <span className="cancelBadge">отменена</span>}
-                  {change ? (
-                    <ChangedDiscipline change={change} />
-                  ) : entry?.discipline ? (
-                    <>
-                      <div className="subjectName">
-                        {entry.discipline}
-                        {entry.format && <span className="formatText"> ({entry.format})</span>}
-                        {entry.subgroup && <span className="subgroupText">{entry.subgroup}</span>}
-                      </div>
-                      {entry.teacher && <div className="subjectTeacher">{formatTeacher(entry.teacher)}</div>}
-                    </>
-                  ) : (
-                    <Text size="sm" c="dimmed">
-                      —
-                    </Text>
-                  )}
-                </div>
-                <div role="cell" className="colAud">
-                  {change ? (
-                    <ChangedAudience change={change} />
-                  ) : (
-                    <span className={isNumericAudience(entry?.audience) ? 'audNum' : 'audText'}>
-                      {entry?.audience || ''}
-                    </span>
-                  )}
-                </div>
+          {/* Вьюпорт строк: свайпается на соседний день, шапка над ним остаётся на месте */}
+          <div
+            className="scheduleRows"
+            role="rowgroup"
+            ref={viewportRef}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerCancel}
+          >
+            <div
+              className="scheduleTrack"
+              role="rowgroup"
+              onTransitionEnd={onTransitionEnd}
+              style={{
+                // Покой показывает среднюю панель (текущий день): базовый сдвиг -100%
+                // (на ширину одной панели), палец поверх добавляет drag.x в пикселях.
+                transform: `translateX(calc(-100% + ${drag.x}px))`,
+                transitionDuration: settling ? undefined : '0ms',
+              }}
+            >
+              <div role="rowgroup" className="schedulePane">
+                <PaneRows pane={panes[0]} changes={changes} now={now} />
               </div>
-            );
-          })}
+              <div role="rowgroup" className="schedulePane">
+                <PaneRows pane={panes[1]} changes={changes} now={now} highlight={lectureState} />
+              </div>
+              <div role="rowgroup" className="schedulePane">
+                <PaneRows pane={panes[2]} changes={changes} now={now} />
+              </div>
+            </div>
+          </div>
         </div>
       </Card>
 

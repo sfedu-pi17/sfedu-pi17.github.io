@@ -137,7 +137,39 @@
   width: 100%;
   flex: 1;
   display: grid;
-  grid-template-rows: 32px repeat(6, 1fr);
+  grid-template-rows: 32px 1fr;
+  min-height: 0;
+}
+
+/* Вьюпорт строк: ловит свайп, обрезает соседние панели карусели. Шапка (.scheduleHead)
+   остаётся снаружи и не двигается. touch-action: pan-y — вертикальный скролл карточки
+   остаётся нативным, горизонталь обрабатываем сами. */
+.scheduleRows {
+  overflow: hidden;
+  width: 100%;
+  min-height: 0;
+  touch-action: pan-y;
+}
+
+/* Лента карусели: две-три панели рядом, двигаем через transform. При прокрутке пальцем
+   transition выключен (следует за пальцем 1:1), при отпускании — плавная докрутка. */
+.scheduleTrack {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  will-change: transform;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Панель одного дня: каждая — полный вьюпорт по ширине, внутри 6 рядов равной высоты.
+   Высота = остаток под шапкой, как и раньше (rows 2-7 были 1fr каждая). */
+.schedulePane {
+  flex: 0 0 100%;
+  display: grid;
+  grid-template-rows: repeat(6, 1fr);
+  min-width: 0;
   min-height: 0;
 }
 
