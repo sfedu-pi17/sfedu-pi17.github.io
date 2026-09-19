@@ -444,6 +444,7 @@
   }
   .scheduleRow > .colNumTime .timeRemaining {
     font-size: 9px;
+    text-align: right;
   }
   .scheduleHead > .colAud,
   .scheduleRow > .colAud {
