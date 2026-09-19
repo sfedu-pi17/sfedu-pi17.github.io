@@ -44,7 +44,9 @@ export default function PaneRows({ pane, changes, now, highlight }) {
                 : null
             }
           />
-          {highlight?.num === number && <span className="timeRemaining">{lectureRemaining}</span>}
+          {highlight?.num === number && <span className="timeRemaining">
+            {lectureRemaining.label}&#32;<nobr>{lectureRemaining.time}</nobr>
+          </span>}
         </div>
         <div role="cell" className="subjectCell">
           {cancelled && <span className="cancelBadge">отменена</span>}

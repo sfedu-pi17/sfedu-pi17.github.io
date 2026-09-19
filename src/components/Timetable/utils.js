@@ -25,7 +25,9 @@ export const formatRemainingLabel = (state, date) => {
   if (h) parts.push(`${h}ч`);
   if (m) parts.push(`${m}м`);
   const label = state.status === 'ongoing' ? 'до конца' : 'до начала';
-  return `${label} ${parts.join(' ')}`;
+  return {
+    label, time: parts.join(' ')
+  };
 };
 
 // Аудитория считается числовой, если состоит только из цифр и разделителей (пробел, дефис).
