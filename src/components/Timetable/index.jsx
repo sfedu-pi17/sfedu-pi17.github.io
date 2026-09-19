@@ -374,7 +374,7 @@ export default function Timetable() {
                 type="button"
                 className={[
                   'dayChip',
-                  isCurrentWeek && isToday ? 'dayToday' : '',
+                  isCurrentWeek && isToday && !isSelected ? 'dayToday' : '',
                   isSelected ? 'daySelected' : '',
                   isChanged ? 'dayChanged' : '',
                 ]

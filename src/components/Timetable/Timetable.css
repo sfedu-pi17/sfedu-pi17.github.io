@@ -146,7 +146,7 @@
 .scheduleHead,
 .scheduleRow {
   display: grid;
-  grid-template-columns: 114px 1fr 88px;
+  grid-template-columns: 120px 1fr 88px;
   min-height: 0;
 }
 
@@ -269,6 +269,7 @@
   color: var(--mantine-color-dimmed);
   white-space: normal;
   line-height: 1.2;
+  justify-self: flex-end;
 }
 
 .scheduleRow > .colNumTime .timeSep {
@@ -320,7 +321,12 @@
    Ячейки остаются прозрачными, чтобы цвет был единым на всю ширину и не
    перекрывался заливкой отдельных колонок. */
 .scheduleRow.currentLecture {
-  background-color: var(--mantine-primary-color-light);
+  /* Приглушённый голубой: разбавляем primary-1 фоном, чтобы не был ярким */
+  background-color: color-mix(in srgb, var(--mantine-color-primary-1) 60%, var(--mantine-color-body));
+}
+[data-mantine-color-scheme='dark'] .scheduleRow.currentLecture {
+  /* В тёмной теме свой приглушённый оттенок: тёмно-синий, чтобы строка была заметна */
+  background-color: color-mix(in srgb, var(--mantine-color-primary-4) 15%, var(--mantine-color-body));
 }
 
 /* Изменившаяся пара — жёлтая подсветка (перекрывает текущую пару) */
