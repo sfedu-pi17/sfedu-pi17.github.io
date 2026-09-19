@@ -5,6 +5,7 @@ import {
   getCurrentWeekType,
   getTodayDayCode,
   getCurrentLectureNumber,
+  getLectureTimeState,
   diffSchedule,
 } from './domain.js';
 
@@ -103,6 +104,35 @@ describe('getCurrentLectureNumber', () => {
     expect(getCurrentLectureNumber(at('11:25'))).toBeNull();
     expect(getCurrentLectureNumber(at('19:16'))).toBeNull();
     expect(getCurrentLectureNumber(at('07:00'))).toBeNull();
+  });
+});
+
+describe('getLectureTimeState', () => {
+  const at = (hhmm) => {
+    const [h, m] = hhmm.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    return d;
+  };
+
+  it('идущая пара -> ongoing', () => {
+    expect(getLectureTimeState(at('08:30'))).toEqual({ num: 1, status: 'ongoing' });
+    expect(getLectureTimeState(at('12:00'))).toEqual({ num: 3, status: 'ongoing' });
+    expect(getLectureTimeState(at('17:40'))).toEqual({ num: 6, status: 'ongoing' });
+  });
+
+  it('во время перемены -> следующая пара upcoming', () => {
+    expect(getLectureTimeState(at('09:36'))).toEqual({ num: 2, status: 'upcoming' });
+    expect(getLectureTimeState(at('11:26'))).toEqual({ num: 3, status: 'upcoming' });
+    expect(getLectureTimeState(at('15:21'))).toEqual({ num: 5, status: 'upcoming' });
+  });
+
+  it('до начала пар -> первая пара upcoming', () => {
+    expect(getLectureTimeState(at('07:00'))).toEqual({ num: 1, status: 'upcoming' });
+  });
+
+  it('после последней пары -> null', () => {
+    expect(getLectureTimeState(at('19:16'))).toBeNull();
   });
 });
 

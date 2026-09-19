@@ -6,7 +6,7 @@ import {
   LECTURE_TIMES,
   getCurrentWeekType,
   getTodayDayCode,
-  getCurrentLectureNumber,
+  getLectureTimeState,
   diffSchedule,
   groupByWeekDay,
   buildReviewSteps,
@@ -31,13 +31,17 @@ const DAY_LABELS = {
 
 // Время пары «8:00 - 9:35» разбито на начало и конец, чтобы на узких экранах
 // медиазапрос мог свернуть их в столбик и спрятать дефис.
-function TimeRange({ value }) {
+// highlight: 'start' | 'end' — жирным время начала (пара ещё не началась) или
+// конца (пара уже идёт). По умолчанию ничего не подсвечиваем.
+function TimeRange({ value, highlight }) {
   const [start, end] = String(value ?? '').split(' - ');
+  const highlightStart = highlight === 'start';
+  const highlightEnd = highlight === 'end';
   return (
     <>
-      <span className="timeStart">{start}</span>
+      <span className={highlightStart ? 'timeStart timeActive' : 'timeStart'}>{start}</span>
       {end && <span className="timeSep">–</span>}
-      {end && <span className="timeEnd">{end}</span>}
+      {end && <span className={highlightEnd ? 'timeEnd timeActive' : 'timeEnd'}>{end}</span>}
     </>
   );
 }
@@ -147,9 +151,10 @@ export default function Timetable() {
     return () => clearTimeout(id);
   }, [toastVisible]);
 
-  // Текущая пара имеет смысл только для сегодняшнего дня в текущей неделе.
+  // Текущая (или следующая во время перемены) пара имеет смысл только для сегодняшнего дня в текущей неделе.
   const isTodayView = isCurrentWeek && selectedDay === todayDay;
-  const currentLecture = isTodayView ? getCurrentLectureNumber(now) : null;
+  // Во время перемены это будет следующая пара со статусом 'upcoming'.
+  const lectureState = isTodayView ? getLectureTimeState(now) : null;
 
   useEffect(() => {
     // Старые данные на момент загрузки — для сравнения изменений.
@@ -378,7 +383,7 @@ export default function Timetable() {
             const cancelled = isCancelledOn(entry?.cancelDate, dayDates[selectedDay]);
             const classes = [
               'scheduleRow',
-              number === currentLecture ? 'currentLecture' : null,
+              number === lectureState?.num ? 'currentLecture' : null,
               change ? 'changedPair' : null,
               cancelled ? 'cancelledPair' : null,
             ]
@@ -387,7 +392,18 @@ export default function Timetable() {
             return (
               <div key={number} role="row" className={classes}>
                 <div role="cell" className="colNum">{number}</div>
-                <div role="cell" className="colTime"><TimeRange value={LECTURE_TIMES[number]} /></div>
+                <div role="cell" className="colTime">
+                  <TimeRange
+                    value={LECTURE_TIMES[number]}
+                    highlight={
+                      lectureState?.num === number
+                        ? lectureState.status === 'ongoing'
+                          ? 'end'
+                          : 'start'
+                        : null
+                    }
+                  />
+                </div>
                 <div role="cell" className="subjectCell">
                   {cancelled && <span className="cancelBadge">отменена</span>}
                   {change ? (

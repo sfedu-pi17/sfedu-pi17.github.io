@@ -138,6 +138,25 @@ export function getCurrentLectureNumber(date = new Date()) {
   return found ? found.num : null;
 }
 
+// Состояние времени относительно звонков: какая пара идёт сейчас ('ongoing') или
+// какая начнётся следующей во время перемены ('upcoming'); null — когда сегодня пар
+// больше нет. Нужно, чтобы во время перемены показывать следующую пару и подсвечивать
+// время её начала (пара ещё не началась) или конца (пара уже идёт).
+export function getLectureTimeState(date = new Date()) {
+  const mins = date.getHours() * 60 + date.getMinutes();
+  const ranges = Object.entries(LECTURE_TIMES).map(([num, span]) => {
+    const [start, end] = span.split('-').map((part) => {
+      const [h, m] = part.trim().split(':').map(Number);
+      return h * 60 + m;
+    });
+    return { num: Number(num), start, end };
+  });
+  const ongoing = ranges.find((r) => mins >= r.start && mins < r.end);
+  if (ongoing) return { num: ongoing.num, status: 'ongoing' };
+  const upcoming = ranges.find((r) => mins < r.start);
+  return upcoming ? { num: upcoming.num, status: 'upcoming' } : null;
+}
+
 // Сравнивает две записи пары по всем содержательным полям.
 function entriesEqual(a, b) {
   if (!a || !b) return a === b;
