@@ -427,7 +427,7 @@
 @media (max-width: 420px) {
   .scheduleHead,
   .scheduleRow {
-    grid-template-columns: 74px 1fr 44px;
+    grid-template-columns: 74px 1fr 54px;
   }
   .scheduleRow > .colNumTime {
     font-size: 11px;
@@ -449,6 +449,11 @@
   .scheduleHead > .colAud,
   .scheduleRow > .colAud {
     font-size: 11px;
+  }
+  /* Значения аудитории на узком экране переносятся по словам, а не обрезаются */
+  .scheduleRow > .colAud {
+    white-space: normal;
+    overflow-wrap: break-word;
   }
   .scheduleHead > .colAud .audFull {
     display: none;
