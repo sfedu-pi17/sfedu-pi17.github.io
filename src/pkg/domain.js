@@ -139,10 +139,11 @@ export function getCurrentLectureNumber(date = new Date()) {
 }
 
 // Состояние времени относительно звонков: какая пара идёт сейчас ('ongoing') или
-// какая начнётся следующей во время перемены ('upcoming'); null — когда сегодня пар
-// больше нет. Нужно, чтобы во время перемены показывать следующую пару и подсвечивать
-// время её начала (пара ещё не началась) или конца (пара уже идёт).
-export function getLectureTimeState(date = new Date()) {
+// какая начнётся следующей во время перемены ('upcoming'); null — когда подходящих
+// пар больше нет. isAvailable(num) говорит, есть ли у пары запись и не отменена ли
+// она. Пустые и отменённые пары пропускаем: если сейчас время отменённой пары или
+// перемена, показываем следующую актуальную (upcoming) и подсвечиваем её начало.
+export function getLectureTimeState(date = new Date(), isAvailable = () => true) {
   const mins = date.getHours() * 60 + date.getMinutes();
   const ranges = Object.entries(LECTURE_TIMES).map(([num, span]) => {
     const [start, end] = span.split('-').map((part) => {
@@ -151,10 +152,23 @@ export function getLectureTimeState(date = new Date()) {
     });
     return { num: Number(num), start, end };
   });
-  const ongoing = ranges.find((r) => mins >= r.start && mins < r.end);
-  if (ongoing) return { num: ongoing.num, status: 'ongoing' };
-  const upcoming = ranges.find((r) => mins < r.start);
-  return upcoming ? { num: upcoming.num, status: 'upcoming' } : null;
+  const found = ranges.find((r) => isAvailable(r.num) && mins < r.end);
+  if (!found) return null;
+  return { num: found.num, status: mins < found.start ? 'upcoming' : 'ongoing' };
+}
+
+// Сколько минут осталось до конца идущей пары ('ongoing') или до начала следующей
+// ('upcoming'); null, если время уже вышло. Используется для подписи под временем.
+export function getMinutesRemaining(state, date = new Date()) {
+  if (!state) return null;
+  const span = LECTURE_TIMES[state.num];
+  const [start, end] = span.split('-').map((part) => {
+    const [h, m] = part.trim().split(':').map(Number);
+    return h * 60 + m;
+  });
+  const target = state.status === 'ongoing' ? end : start;
+  const delta = target - (date.getHours() * 60 + date.getMinutes());
+  return delta > 0 ? delta : null;
 }
 
 // Сравнивает две записи пары по всем содержательным полям.

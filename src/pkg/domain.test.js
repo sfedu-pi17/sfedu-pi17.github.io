@@ -6,6 +6,7 @@ import {
   getTodayDayCode,
   getCurrentLectureNumber,
   getLectureTimeState,
+  getMinutesRemaining,
   diffSchedule,
 } from './domain.js';
 
@@ -133,6 +134,43 @@ describe('getLectureTimeState', () => {
 
   it('после последней пары -> null', () => {
     expect(getLectureTimeState(at('19:16'))).toBeNull();
+  });
+
+  it('пропускает недоступные пары (нет записи или отменены)', () => {
+    // время 1-й пары, но она отменена -> следующая доступная 2-я ещё не началась
+    expect(getLectureTimeState(at('08:30'), (n) => n !== 1)).toEqual({ num: 2, status: 'upcoming' });
+    // время 2-й пары, но она отменена -> показываем 3-ю как upcoming
+    expect(getLectureTimeState(at('10:00'), (n) => n !== 2)).toEqual({ num: 3, status: 'upcoming' });
+    // перерыв после 1-й, пара 2 отменена -> 3-я upcoming
+    expect(getLectureTimeState(at('09:36'), (n) => n !== 2)).toEqual({ num: 3, status: 'upcoming' });
+  });
+
+  it('когда после недоступной пары нет других доступных -> null', () => {
+    expect(getLectureTimeState(at('10:00'), (n) => n === 1)).toBeNull();
+  });
+});
+
+describe('getMinutesRemaining', () => {
+  const at = (hhmm) => {
+    const [h, m] = hhmm.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    return d;
+  };
+
+  it('идущая пара -> до её конца', () => {
+    expect(getMinutesRemaining({ num: 1, status: 'ongoing' }, at('09:00'))).toBe(35);
+    expect(getMinutesRemaining({ num: 3, status: 'ongoing' }, at('12:30'))).toBe(60);
+  });
+
+  it('следующая пара -> до её начала', () => {
+    expect(getMinutesRemaining({ num: 2, status: 'upcoming' }, at('09:36'))).toBe(14);
+    expect(getMinutesRemaining({ num: 3, status: 'upcoming' }, at('11:26'))).toBe(29);
+  });
+
+  it('время вышло или нет состояния -> null', () => {
+    expect(getMinutesRemaining(null, at('09:00'))).toBeNull();
+    expect(getMinutesRemaining({ num: 1, status: 'ongoing' }, at('09:36'))).toBeNull();
   });
 });
 

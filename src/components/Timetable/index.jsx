@@ -7,6 +7,7 @@ import {
   getCurrentWeekType,
   getTodayDayCode,
   getLectureTimeState,
+  getMinutesRemaining,
   diffSchedule,
   groupByWeekDay,
   buildReviewSteps,
@@ -32,17 +33,18 @@ const DAY_LABELS = {
 // Время пары «8:00 - 9:35» разбито на начало и конец, чтобы на узких экранах
 // медиазапрос мог свернуть их в столбик и спрятать дефис.
 // highlight: 'start' | 'end' — жирным время начала (пара ещё не началась) или
-// конца (пара уже идёт). По умолчанию ничего не подсвечиваем.
+// конца (пара уже идёт). Время обёрнуто в .timeRange, чтобы ячейка раскладывала
+// его в своей колонке, а подпись про остаток времени рендерилась отдельно.
 function TimeRange({ value, highlight }) {
   const [start, end] = String(value ?? '').split(' - ');
   const highlightStart = highlight === 'start';
   const highlightEnd = highlight === 'end';
   return (
-    <>
+    <span className="timeRange">
       <span className={highlightStart ? 'timeStart timeActive' : 'timeStart'}>{start}</span>
       {end && <span className="timeSep">–</span>}
       {end && <span className={highlightEnd ? 'timeEnd timeActive' : 'timeEnd'}>{end}</span>}
-    </>
+    </span>
   );
 }
 
@@ -103,6 +105,21 @@ function ChangedAudience({ change }) {
 const formatDayDate = (d) =>
   `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
 
+// Подпись под временем актуальной пары: «до конца Xч Yм» для идущей пары,
+// «до начала …» для следующей. Нулевые часы/минуты не выводим, секунды (0 минут)
+// не показываем вовсе.
+const formatRemainingLabel = (state, date) => {
+  const mins = getMinutesRemaining(state, date);
+  if (!mins) return null;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  const parts = [];
+  if (h) parts.push(`${h}ч`);
+  if (m) parts.push(`${m}м`);
+  const label = state.status === 'ongoing' ? 'до конца' : 'до начала';
+  return `${label} ${parts.join(' ')}`;
+};
+
 // Аудитория считается числовой, если состоит только из цифр и разделителей (пробел, дефис).
 const isNumericAudience = (s) => /^[\d\s-]+$/.test(String(s ?? '').trim()) && String(s ?? '').trim() !== '';
 
@@ -151,10 +168,8 @@ export default function Timetable() {
     return () => clearTimeout(id);
   }, [toastVisible]);
 
-  // Текущая (или следующая во время перемены) пара имеет смысл только для сегодняшнего дня в текущей неделе.
+  // Подсветка текущей/следующей пары осмысленна только для сегодняшнего дня в текущей неделе.
   const isTodayView = isCurrentWeek && selectedDay === todayDay;
-  // Во время перемены это будет следующая пара со статусом 'upcoming'.
-  const lectureState = isTodayView ? getLectureTimeState(now) : null;
 
   useEffect(() => {
     // Старые данные на момент загрузки — для сравнения изменений.
@@ -198,6 +213,19 @@ export default function Timetable() {
 
   // Даты дней для отображаемой недели (под подписями пн..сб).
   const dayDates = useMemo(() => getDayDates(weekOffset), [weekOffset]);
+
+  // Пара доступна, если на этот день есть запись и она не отменена; пустые и
+  // отменённые пропускаем при подсветке, показывая следующую актуальную.
+  const isAvailableLecture = (day, num) => {
+    const entry = weekDayMap[day][num];
+    return !!entry?.discipline && !isCancelledOn(entry.cancelDate, dayDates[day]);
+  };
+  // Во время перемены это будет следующая пара со статусом 'upcoming'.
+  const lectureState = isTodayView
+    ? getLectureTimeState(now, (num) => isAvailableLecture(selectedDay, num))
+    : null;
+  // Подпись под временем актуальной пары («начнётся/закончится через …»).
+  const lectureRemaining = lectureState ? formatRemainingLabel(lectureState, now) : null;
 
   // Изменённые дни/пары для текущей отображаемой недели.
   const weekChanges = changes[week] || {};
@@ -278,7 +306,7 @@ export default function Timetable() {
 
   return (
     <Container size="md" px="0" className="timetableContainer">
-      <Card shadow="lg" withBorder radius="md" p="sm" className="timetableCard">
+      <Card shadow="lg" withBorder radius="md" py="sm" px="0" className="timetableCard">
         {/* Уведомление об изменениях в расписании */}
         {showNotif && (
           <Group className="changesBanner" justify="space-between" align="center" gap="xs">
@@ -335,7 +363,7 @@ export default function Timetable() {
         </Group>
 
         {/* Выбор дня недели; сегодняшний день подсвечен отдельно, изменённые — жёлтым */}
-        <Group gap={6} mb="sm" className="dayBar">
+        <Group gap={6} className="dayBar">
           {DAY_ORDER.map((day) => {
             const isToday = day === todayDay;
             const isSelected = day === selectedDay;
@@ -365,8 +393,10 @@ export default function Timetable() {
         {/* Расписание на выбранный день: grid-разметка (вместо table) */}
         <div className="scheduleTable" role="table">
           <div className="scheduleHead" role="row">
-            <div role="columnheader" className="colNum">№</div>
-            <div role="columnheader" className="colTime">Время</div>
+            <div role="columnheader" className="colNumTime">
+              <span className="headNum">№</span>
+              <span className="headTime">Время</span>
+            </div>
             <div role="columnheader" className="subjectCell">Дисциплина</div>
             <div role="columnheader" className="colAud">
               <span className="audFull">Аудитория</span>
@@ -391,8 +421,8 @@ export default function Timetable() {
               .join(' ');
             return (
               <div key={number} role="row" className={classes}>
-                <div role="cell" className="colNum">{number}</div>
-                <div role="cell" className="colTime">
+                <div role="cell" className="colNumTime">
+                  <span className="lectureNum">{number}</span>
                   <TimeRange
                     value={LECTURE_TIMES[number]}
                     highlight={
@@ -403,6 +433,9 @@ export default function Timetable() {
                         : null
                     }
                   />
+                  {lectureState?.num === number && (
+                    <span className="timeRemaining">{lectureRemaining}</span>
+                  )}
                 </div>
                 <div role="cell" className="subjectCell">
                   {cancelled && <span className="cancelBadge">отменена</span>}
