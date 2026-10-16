@@ -1,11 +1,14 @@
 // Работа со стором: кэш расписания в localStorage.
 // При открытии страницы сначала показываем сохранённые данные, а свежие
-// подтягиваем асинхронно в фоне. Храним версию сборки (envelope): если версия
-// в localStorage не совпадает с текущим билдом — кэш несовместим, очищаем
-// и работаем как будто его нет.
+// подтягиваем асинхронно в фоне. Храним версию схемы (envelope): если версия
+// в localStorage не совпадает с текущей схемой — кэш несовместим, очищаем
+// и работаем как будто его нет. Версия схемы не меняется от деплоя,
+// поэтому обновление фронта не стирает расписание у офлайн-пользователя.
 
 const STORAGE_KEY = 'sfedu.schedule';
-const CACHE_VERSION = __BUILD_HASH__;
+// Версия ФОРМАТА кэша (схема данных), а не сборки. Растёт только при изменении структуры
+// записей; деплой больше не стирает расписание у офлайн-пользователя.
+const SCHEMA_VERSION = 1;
 
 export function loadScheduleCache() {
   try {
@@ -16,7 +19,7 @@ export function loadScheduleCache() {
       parsed &&
       typeof parsed === 'object' &&
       !Array.isArray(parsed) &&
-      parsed.version === CACHE_VERSION &&
+      parsed.version === SCHEMA_VERSION &&
       Array.isArray(parsed.data)
     ) {
       return parsed.data;
@@ -31,7 +34,7 @@ export function loadScheduleCache() {
 
 export function saveScheduleCache(schedule) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: CACHE_VERSION, data: schedule }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: SCHEMA_VERSION, data: schedule }));
   } catch {
     // приватный режим / переполнение хранилища — игнорируем
   }

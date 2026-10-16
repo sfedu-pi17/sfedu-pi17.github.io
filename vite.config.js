@@ -2,24 +2,58 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
-import { execSync } from 'node:child_process'
-
-// Хэш текущего коммита git — версия сборки. Инъектируется в код как __BUILD_HASH__
-// и используется как версия кэша расписания в localStorage: при несовпадении версии
-// кэш очищается. Fallback 'dev' — стабильное значение, если git недоступен.
-function buildHash() {
-  try {
-    return execSync('git rev-parse HEAD', { encoding: 'utf-8' }).trim()
-  } catch {
-    return 'dev'
-  }
-}
+import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      // SW сам обновляет прекэш при новом деплое и перезагружает страницу один раз.
+      // skipWaiting / clientsClaim ставит сам плагин — вручную не добавляем.
+      registerType: 'autoUpdate',
+      // Ассеты, которые попадают в прекэш помимо сгенерированных (js/css/html).
+      includeAssets: ['favicon.ico', 'favicon-96x96.png', 'apple-touch-icon.png'],
+      manifest: {
+        name: 'Расписание ЮФУ',
+        short_name: 'Расписание',
+        description: 'Электронное расписание группы ПИ-17 ЮФУ',
+        lang: 'ru',
+        // Репозиторий <user>.github.io — деплой в корень, поэтому start_url/scope = '/'.
+        start_url: '/',
+        scope: '/',
+        display: 'standalone',
+        background_color: '#ffffff',
+        // theme_color = Mantine primary blue, чтобы панель браузера совпадала с интерфейсом.
+        theme_color: '#3b82f6',
+        icons: [
+          { src: '/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/web-app-manifest-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html}'],
+        globIgnores: ['**/sw.js'],
+        cleanupOutdatedCaches: true,
+        runtimeCaching: [
+          {
+            // Google Sheets CSV (cross-origin) — онлайн свежее, офлайн последний удачный.
+            urlPattern: /^https:\/\/docs\.google\.com\/spreadsheets\/.*\?.*output=csv/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'schedule-csv-v1',
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 1, maxAgeSeconds: 60 * 60 * 24 * 14 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+      },
+      showMaximumFileSizeToCacheInBytesWarning: true,
+    }),
+  ],
   base: '/',
   resolve: {
     alias: {
@@ -28,9 +62,6 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0', // доступ с других устройств по локальной сети
-  },
-  define: {
-    __BUILD_HASH__: JSON.stringify(buildHash()),
   },
   test: {
     environment: 'node',
