@@ -1,48 +1,48 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Card, Text, Loader, Container, Group } from '@mantine/core';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Card, Text, Container, Group } from '@mantine/core';
 import { IconAlertCircle } from '@tabler/icons-react';
 import {
   getCurrentWeekType,
   getTodayDayCode,
   getLectureTimeState,
   shiftDay,
-  diffSchedule,
   groupByWeekDay,
   buildReviewSteps,
   getDayDates,
   isCancelledOn,
 } from '@/pkg/domain.js';
-import { parseScheduleCsv } from '@/pkg/serialization.js';
-import { loadScheduleCache, saveScheduleCache } from '@/pkg/storage.js';
-import { fetchScheduleCsv } from '@/pkg/api.js';
+import { useNow } from '@/hooks/useNow.js';
+import { useScheduleSource } from './useScheduleSource.js';
+import { useDayCarousel } from './useDayCarousel.js';
 import { weekForOffset } from './utils.js';
 import WeekHeader from './WeekHeader.jsx';
 import DayBar from './DayBar.jsx';
 import ChangesBanner from './ChangesBanner.jsx';
 import PaneRows from './PaneRows.jsx';
+import ScheduleError from './ScheduleError.jsx';
 import './Timetable.css';
 
 export default function Timetable() {
-  const [schedule, setSchedule] = useState(() => loadScheduleCache());
-  // Догрузка свежих данных: показывает компактный индикатор (тост), не блокируя интерфейс.
-  // Сначала true (первая загрузка), сбрасывается после ответа.
-  const [refreshing, setRefreshing] = useState(true);
-  // Ошибка загрузки — показываем уведомление.
-  const [error, setError] = useState(false);
-  // Тост об ошибке автоматически скрывается через 10 секунд.
-  const [toastVisible, setToastVisible] = useState(false);
-
-  // Изменившиеся пары (diff старый -> новый) и уведомление о них.
-  const [changes, setChanges] = useState({});
-  const [showNotif, setShowNotif] = useState(false);
-  const [isReviewing, setIsReviewing] = useState(false);
+  // Данные (кэш + фоновая догрузка CSV + diff) и индикаторы загрузки/ошибки — в хуке.
+  const {
+    schedule,
+    error,
+    toastVisible,
+    changes,
+    showNotif,
+    refresh,
+    commitChanges,
+  } = useScheduleSource();
+  // Текущее время: тикает каждую минуту и при возврате к приложению.
+  const [now, refreshNow] = useNow();
 
   // По умолчанию — текущая неделя и текущий день.
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDay, setSelectedDay] = useState(() => getTodayDayCode());
-  // Текущее время: обновляем каждую минуту и при возврате к приложению, чтобы
-  // текущий день/неделя и метка пары не устаревали.
-  const [now, setNow] = useState(() => new Date());
+  // Режим просмотра diff; навигация (weekOffset/selectedDay) и данные с commitChanges
+  // живут раздельно: этот флаг — про показ, а не про хранение расписания.
+  const [isReviewing, setIsReviewing] = useState(false);
+
   // Даты/неделя зависят от now: смена суток или недели отслеживается без перезагрузки.
   const todayDay = useMemo(() => getTodayDayCode(now), [now]);
   const currentWeek = useMemo(() => getCurrentWeekType(now), [now]);
@@ -54,70 +54,8 @@ export default function Timetable() {
   // у сегодняшней даты прошлого больше нет.
   const isPrevDisabled = weekOffset <= 0;
 
-  // Новое расписание, ещё не записанное в кэш: сохраняем только после «ОК» в режиме изменений.
-  const pendingData = useRef(null);
-  // Счётчик «до начала/до конца» должен обновляться ровно в начале каждой минуты, а не
-  // каждые 30с. Первый тик — setTimeout до круглой минуты, дальше — setInterval в 60с:
-  // в момент перехода на новую минуту мы уже точно в её начале.
-  useEffect(() => {
-    let intervalId;
-    const syncMinute = () => {
-      setNow(new Date());
-      intervalId = setInterval(() => setNow(new Date()), 60_000);
-    };
-    const msToNextMinute = 60_000 - (Date.now() % 60_000);
-    const timeoutId = setTimeout(syncMinute, msToNextMinute);
-    return () => {
-      clearTimeout(timeoutId);
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, []);
-
-  // Автоскрытие тоста об ошибке через 10 секунд.
-  useEffect(() => {
-    if (!toastVisible) return;
-    const id = setTimeout(() => setToastVisible(false), 10_000);
-    return () => clearTimeout(id);
-  }, [toastVisible]);
-
   // Подсветка текущей/следующей пары осмысленна только для сегодняшнего дня в текущей неделе.
   const isTodayView = isCurrentWeek && selectedDay === todayDay;
-
-  // Загрузка свежего CSV: показываем кэш, в фоне подтягиваем и диффим.
-  // Вынесена в useCallback, чтобы вызывать и на монтировании, и при возврате
-  // к приложению (focus/visibilitychange/online) без ручной перезагрузки.
-  const refresh = useCallback(() => {
-    const oldData = loadScheduleCache();
-    fetchScheduleCsv()
-      .then((csvText) => {
-        const data = parseScheduleCsv(csvText);
-        const diffed = diffSchedule(oldData, data);
-        // Если есть изменения — не сохраняем кэш, ждём подтверждения «ОК»;
-        // иначе (нет старых данных или всё совпало) пишем сразу.
-        const hasChanges = oldData.length && Object.keys(diffed).length;
-        pendingData.current = data;
-        if (!hasChanges) saveScheduleCache(data);
-        setChanges(diffed);
-        if (hasChanges) {
-          setShowNotif(true);
-        }
-        setSchedule(data);
-        setRefreshing(false);
-        setError(false);
-        setToastVisible(false);
-      })
-      .catch((err) => {
-        console.error('Ошибка загрузки CSV:', err);
-        setRefreshing(false);
-        setError(true);
-        // Офлайн не пугаем тостом — в хедере уже крутится лоадер.
-        if (navigator.onLine) setToastVisible(true);
-      });
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
 
   // Автообновление при возврате к приложению: почти то же, что ручная перезагрузка —
   // пересчитываем время/даты и дотягиваем свежий CSV.
@@ -127,7 +65,7 @@ export default function Timetable() {
       clearTimeout(timer);
       timer = setTimeout(() => {
         refresh();
-        setNow(new Date());
+        refreshNow();
       }, 1500); // дебаунс: не спамить при частых переключениях вкладок
     };
     const onVisible = () => {
@@ -142,7 +80,15 @@ export default function Timetable() {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('online', trigger);
     };
-  }, [refresh]);
+  }, [refresh, refreshNow]);
+
+  // --- Карусель дней: состояние жеста и соседние панели ---
+  const onCommitDay = useCallback((day, off) => {
+    setSelectedDay(day);
+    setWeekOffset(off);
+  }, []);
+  const { viewportRef, drag, settling, onPointerDown, onPointerMove, onPointerUp, onPointerCancel, onTransitionEnd } =
+    useDayCarousel({ isReviewing, selectedDay, weekOffset, onCommit: onCommitDay });
 
   // Записи текущей недели, сгруппированные по дню и номеру пары.
   const weekDayMap = useMemo(() => groupByWeekDay(schedule, week), [schedule, week]);
@@ -167,13 +113,6 @@ export default function Timetable() {
     return !!dd && Object.keys(dd).length > 0;
   };
 
-  // --- Карусель дней: состояние жеста и соседние панели ---
-  const viewportRef = useRef(null);
-  const gestureRef = useRef(null); // { startX, startY, axis, dir, pointerId, lastDx }
-  const pendingCommitRef = useRef(null);
-  const [drag, setDrag] = useState({ x: 0 });
-  const [settling, setSettling] = useState(false);
-
   // Соседние дни для панелей: [предыдущий, текущий, следующий]. Каждая панель — свой
   // день/неделя со своими dayWeekMap/dayDates, даже если это соседняя неделя.
   const panes = useMemo(() => {
@@ -185,75 +124,6 @@ export default function Timetable() {
     const next = shiftDay(selectedDay, weekOffset, +1);
     return [mk(prev.day, prev.weekOffset), mk(selectedDay, weekOffset), mk(next.day, next.weekOffset)];
   }, [schedule, currentWeek, selectedDay, weekOffset]);
-
-  const onPointerDown = (e) => {
-    if (isReviewing || settling) return;
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-    const width = viewportRef.current?.getBoundingClientRect().width || 0;
-    gestureRef.current = { startX: e.clientX, startY: e.clientY, axis: null, dir: null, pointerId: e.pointerId, lastDx: 0, width };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
-
-  const onPointerMove = (e) => {
-    const g = gestureRef.current;
-    if (!g || settling) return;
-    const dx = e.clientX - g.startX;
-    const dy = e.clientY - g.startY;
-    // Пока ось не зафиксирована — ждём, когда движение превысит мёртвую зону (~8px),
-    // и решаем: горизонтальный свайп или вертикальная прокрутка.
-    if (g.axis === null) {
-      if (Math.abs(dx) <= 8 && Math.abs(dy) <= 8) return;
-      g.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-      if (g.axis === 'y') {
-        gestureRef.current = null;
-        e.currentTarget.releasePointerCapture(g.pointerId);
-        return; // вертикальный скролл карточки идёт нативно
-      }
-    }
-    if (g.axis === 'x') {
-      g.dir = dx < 0 ? 'next' : 'prev';
-      g.lastDx = dx;
-      // Клэмпим к ширине панели, чтобы при сильном уводе пальца не было пустого поля.
-      const clamped = Math.max(-g.width, Math.min(g.width, dx));
-      setDrag({ x: clamped }); // содержание следует за пальцем 1:1 (transition выключен)
-    }
-  };
-
-  const onPointerUp = () => {
-    const g = gestureRef.current;
-    gestureRef.current = null;
-    if (!g || settling || g.axis !== 'x') return;
-    const width = g.width || 0;
-    const threshold = Math.max(50, 0.25 * width);
-    let commit = null;
-    if (Math.abs(g.lastDx) > threshold) {
-      commit = shiftDay(selectedDay, weekOffset, g.dir === 'next' ? 1 : -1);
-      // Уважаем кламп недель: назад из самой нижней недели не уходим, а возвращаемся.
-      if (commit.weekOffset < 0) commit = null;
-    }
-    pendingCommitRef.current = commit;
-    setDrag({ x: commit ? (g.dir === 'next' ? -width : width) : 0 });
-    setSettling(true); // включает плавный transition к целевому сдвигу
-  };
-
-  const onPointerCancel = () => {
-    gestureRef.current = null;
-    pendingCommitRef.current = null;
-    setDrag({ x: 0 });
-    setSettling(false);
-  };
-
-  const onTransitionEnd = (e) => {
-    if (e.propertyName !== 'transform' || !settling) return;
-    const commit = pendingCommitRef.current;
-    pendingCommitRef.current = null;
-    if (commit) {
-      setSelectedDay(commit.day);
-      setWeekOffset(commit.weekOffset);
-    }
-    setSettling(false);
-    setDrag({ x: 0 });
-  };
 
   // Листание недель вперёд — бесконечно, назад — только до текущей.
   const prevWeek = () => setWeekOffset((o) => Math.max(o - 1, 0));
@@ -282,12 +152,10 @@ export default function Timetable() {
     }
   };
 
-  // Завершение режима сравнения («ОК») — сохраняем новое расписание, убираем уведомление и подсветку.
+  // Завершение режима сравнения («ОК») — сохраняем новое расписание (в хуке), выходим из диффа.
   const dismissChanges = () => {
-    if (pendingData.current) saveScheduleCache(pendingData.current);
+    commitChanges();
     setIsReviewing(false);
-    setShowNotif(false);
-    setChanges({});
   };
 
   // Индекс текущего шага в общем порядке просмотра обеих недель.
@@ -307,21 +175,7 @@ export default function Timetable() {
 
   // Нет ни кэша, ни свежих данных и произошла ошибка — показываем сообщение о сбое.
   if (!schedule.length && error) {
-    return (
-      <Container size="md" mt="md" px="0">
-        <Card shadow="lg" withBorder radius="md" p="xl">
-          <Group justify="center" gap="sm">
-            <IconAlertCircle size={28} color="var(--mantine-color-red-6)" />
-            <Text c="red" fw={600}>
-              Не удалось загрузить расписание
-            </Text>
-          </Group>
-          <Text size="sm" c="dimmed" ta="center" mt="xs">
-            Попробуйте обновить страницу позже.
-          </Text>
-        </Card>
-      </Container>
-    );
+    return <ScheduleError />;
   }
 
   return (
@@ -405,14 +259,6 @@ export default function Timetable() {
           </div>
         </div>
       </Card>
-
-      {/* Всплывающий индикатор обновления — поверх экрана, справа снизу, не блокирует и не двигает разметку */}
-      {refreshing && (
-        <Group className="refreshToast" gap={6} align="center">
-          <Loader size="xs" />
-          <Text size="sm" c="dimmed">Обновление…</Text>
-        </Group>
-      )}
 
       {/* Всплывающее уведомление об ошибке обновления — скрывается через 10 секунд */}
       {toastVisible && (
