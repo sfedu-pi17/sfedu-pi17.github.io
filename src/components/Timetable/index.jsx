@@ -5,6 +5,7 @@ import {
   getCurrentWeekType,
   getTodayDayCode,
   getLectureTimeState,
+  buildDayTimes,
   shiftDay,
   groupByWeekDay,
   buildReviewSteps,
@@ -96,6 +97,20 @@ export default function Timetable() {
   // Даты дней для отображаемой недели (под подписями пн..сб).
   const dayDates = useMemo(() => getDayDates(weekOffset), [weekOffset]);
 
+  // Соседние дни для панелей: [предыдущий, текущий, следующий]. Каждая панель — свой
+  // день/неделя со своими dayWeekMap/dayDates, даже если это соседняя неделя; times —
+  // актуальное время каждой пары дня с учётом каскадного сдвига переопределений.
+  const panes = useMemo(() => {
+    const mk = (day, off) => {
+      const w = weekForOffset(off, currentWeek);
+      const dayMap = groupByWeekDay(schedule, w);
+      return { day, weekOffset: off, week: w, weekDayMap: dayMap, dayDates: getDayDates(off), times: buildDayTimes(dayMap[day]) };
+    };
+    const prev = shiftDay(selectedDay, weekOffset, -1);
+    const next = shiftDay(selectedDay, weekOffset, +1);
+    return [mk(prev.day, prev.weekOffset), mk(selectedDay, weekOffset), mk(next.day, next.weekOffset)];
+  }, [schedule, currentWeek, selectedDay, weekOffset]);
+
   // Пара доступна, если на этот день есть запись и она не отменена; пустые и
   // отменённые пропускаем при подсветке, показывая следующую актуальную.
   const isAvailableLecture = (day, num) => {
@@ -103,8 +118,9 @@ export default function Timetable() {
     return !!entry?.discipline && !isCancelledOn(entry.cancelDate, dayDates[day]);
   };
   // Во время перемены это будет следующая пара со статусом 'upcoming'.
+  // times панели выбранного дня — чтобы подсветка шла по реальному (возможно сдвинутому) времени.
   const lectureState = isTodayView
-    ? getLectureTimeState(now, (num) => isAvailableLecture(selectedDay, num))
+    ? getLectureTimeState(now, (num) => isAvailableLecture(selectedDay, num), panes[1].times)
     : null;
   // Изменённые дни/пары для текущей отображаемой недели.
   const weekChanges = changes[week] || {};
@@ -112,18 +128,6 @@ export default function Timetable() {
     const dd = weekChanges[day];
     return !!dd && Object.keys(dd).length > 0;
   };
-
-  // Соседние дни для панелей: [предыдущий, текущий, следующий]. Каждая панель — свой
-  // день/неделя со своими dayWeekMap/dayDates, даже если это соседняя неделя.
-  const panes = useMemo(() => {
-    const mk = (day, off) => {
-      const w = weekForOffset(off, currentWeek);
-      return { day, weekOffset: off, week: w, weekDayMap: groupByWeekDay(schedule, w), dayDates: getDayDates(off) };
-    };
-    const prev = shiftDay(selectedDay, weekOffset, -1);
-    const next = shiftDay(selectedDay, weekOffset, +1);
-    return [mk(prev.day, prev.weekOffset), mk(selectedDay, weekOffset), mk(next.day, next.weekOffset)];
-  }, [schedule, currentWeek, selectedDay, weekOffset]);
 
   // Листание недель вперёд — бесконечно, назад — только до текущей.
   const prevWeek = () => setWeekOffset((o) => Math.max(o - 1, 0));

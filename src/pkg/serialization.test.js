@@ -24,6 +24,7 @@ describe('parseScheduleCsv', () => {
       audience: 'MS Teams',
       subgroup: '',
       cancelDate: '',
+      overrideTime: null,
     });
 
     expect(rows[1].format).toBe('практ');
@@ -71,5 +72,22 @@ describe('parseScheduleCsv', () => {
     const rows = parseScheduleCsv(csv);
     expect(rows).toHaveLength(1);
     expect(rows[0].discipline).toBe('Письмо, мышление');
+  });
+
+  it('парсит переопределённое время пары (одно и два значения)', () => {
+    const csv = `week,day,lecture_number,discipline,format,teacher,auaudience,subgroup,override_time
+верхняя,пн,2,Физика,лек,Иванов,101,,17:00
+верхняя,вт,3,Матанализ,практ,Петров,102,,17:00-19:00
+`;
+    const rows = parseScheduleCsv(csv);
+    // одно значение — начало, конец = +95 мин
+    expect(rows[0].overrideTime).toBe('17:00 - 18:35');
+    // два значения — начало и конец как есть
+    expect(rows[1].overrideTime).toBe('17:00 - 19:00');
+  });
+
+  it('пустое переопределение времени -> null', () => {
+    const rows = parseScheduleCsv(SAMPLE_CSV);
+    expect(rows[0].overrideTime).toBeNull();
   });
 });

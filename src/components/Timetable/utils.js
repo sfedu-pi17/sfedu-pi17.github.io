@@ -1,4 +1,4 @@
-import { getMinutesRemaining } from '@/pkg/domain.js';
+import { getMinutesRemaining, LECTURE_TIMES } from '@/pkg/domain.js';
 
 export const DAY_LABELS = {
   пн: 'Пн',
@@ -15,9 +15,9 @@ export const formatDayDate = (d) =>
 
 // Подпись под временем актуальной пары: «до конца Xч Yм» для идущей пары,
 // «до начала …» для следующей. Нулевые часы/минуты не выводим, секунды (0 минут)
-// не показываем вовсе.
-export const formatRemainingLabel = (state, date) => {
-  const mins = getMinutesRemaining(state, date);
+// не показываем вовсе. times — карта «номер пары -> время» для пары с переопределением.
+export const formatRemainingLabel = (state, date, times = LECTURE_TIMES) => {
+  const mins = getMinutesRemaining(state, date, times);
   if (!mins) return null;
   const h = Math.floor(mins / 60);
   const m = mins % 60;

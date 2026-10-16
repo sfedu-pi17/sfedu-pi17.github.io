@@ -3,7 +3,7 @@
 // В первой строке CSV идут названия колонок — они используются как имена полей.
 // Известная опечатка в заголовке «auaudience» нормализуется в «audience».
 
-import { parseDiscipline } from './domain.js';
+import { parseDiscipline, normalizeOverrideTime } from './domain.js';
 
 // Распарсить полный CSV-текст в массив строк (учитывает кавычки и переводы строк).
 function parseCsv(text) {
@@ -69,6 +69,9 @@ function normalizeRecord(rec) {
     // Дата отмены пары (заполнена — пара отменена в этот день). Колонка может называться
     // cancel_date или cancelDate.
     cancelDate: (rec.cancel_date ?? rec.cancelDate ?? '').trim(),
+    // Переопределённое время пары: одно значение — начало (+95 мин конца), два — диапазон.
+    // Колонка может называться override_time или overrideTime.
+    overrideTime: normalizeOverrideTime(rec.override_time ?? rec.overrideTime ?? ''),
   };
 }
 

@@ -1,5 +1,5 @@
 import { Text } from '@mantine/core';
-import { LECTURE_TIMES, isSummerBreak, isCancelledOn, formatTeacher } from '@/pkg/domain.js';
+import { isSummerBreak, isCancelledOn, formatTeacher } from '@/pkg/domain.js';
 import TimeRange from './TimeRange.jsx';
 import { ChangedDiscipline, ChangedAudience } from './DiffCells.jsx';
 import { formatRemainingLabel, isNumericAudience } from './utils.js';
@@ -9,11 +9,13 @@ import { formatRemainingLabel, isNumericAudience } from './utils.js';
 // панелей его нет, поэтому без подсветки и подписи «до конца/начала».
 // Изменения читаются по неделе конкретной панели (changes[pane.week]), а не по
 // глобальной — соседние недели могут содержать свой diff.
+// pane.times — актуальное время каждой пары дня с каскадным сдвигом переопределений;
+// по нему же считаем подпись «до конца/начала», чтобы она шла по реальному времени.
 export default function PaneRows({ pane, changes, now, highlight }) {
-  const { day, week, weekDayMap, dayDates } = pane;
+  const { day, week, weekDayMap, dayDates, times } = pane;
   const weekChanges = changes[week] || {};
   const pairChange = (day, num) => weekChanges[day]?.[num] || null;
-  const lectureRemaining = highlight ? formatRemainingLabel(highlight, now) : null;
+  const lectureRemaining = highlight ? formatRemainingLabel(highlight, now, times) : null;
 
   return Array.from({ length: 6 }, (_, i) => {
     const number = i + 1;
@@ -30,12 +32,14 @@ export default function PaneRows({ pane, changes, now, highlight }) {
     ]
       .filter(Boolean)
       .join(' ');
+    // Время пары из таблицы дня (учитывает каскадный сдвиг переопределений).
+    const lectureTime = times[number] || '';
     return (
       <div key={number} role="row" className={classes}>
         <div role="cell" className="colNumTime">
           <span className="lectureNum">{number}</span>
           <TimeRange
-            value={LECTURE_TIMES[number]}
+            value={lectureTime}
             highlight={
               highlight?.num === number
                 ? highlight.status === 'ongoing'

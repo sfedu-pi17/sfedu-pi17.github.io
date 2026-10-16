@@ -7,6 +7,8 @@ import {
   getCurrentLectureNumber,
   getLectureTimeState,
   getMinutesRemaining,
+  normalizeOverrideTime,
+  buildDayTimes,
   shiftDay,
   diffSchedule,
 } from './domain.js';
@@ -172,6 +174,109 @@ describe('getMinutesRemaining', () => {
   it('время вышло или нет состояния -> null', () => {
     expect(getMinutesRemaining(null, at('09:00'))).toBeNull();
     expect(getMinutesRemaining({ num: 1, status: 'ongoing' }, at('09:36'))).toBeNull();
+  });
+});
+
+describe('normalizeOverrideTime', () => {
+  it('одно время -> начало, конец +95 мин', () => {
+    expect(normalizeOverrideTime('17:00')).toBe('17:00 - 18:35');
+    expect(normalizeOverrideTime('9:50')).toBe('9:50 - 11:25');
+  });
+
+  it('два времени -> начало и конец как есть', () => {
+    expect(normalizeOverrideTime('17:00-19:00')).toBe('17:00 - 19:00');
+    expect(normalizeOverrideTime('17:00 – 19:00')).toBe('17:00 - 19:00');
+  });
+
+  it('пустое значение -> null', () => {
+    expect(normalizeOverrideTime('')).toBeNull();
+    expect(normalizeOverrideTime(null)).toBeNull();
+    expect(normalizeOverrideTime('  ')).toBeNull();
+  });
+});
+
+describe('getLectureTimeState с переопределением', () => {
+  const at = (hhmm) => {
+    const [h, m] = hhmm.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    return d;
+  };
+  // Пара 2 переопределена на 17:00 - 18:35 (вместо 9:50 - 11:25).
+  const times = { 1: '8:00 - 9:35', 2: '17:00 - 18:35', 3: '11:55 - 13:30' };
+
+  it('время переопределённой пары -> ongoing', () => {
+    expect(getLectureTimeState(at('17:30'), (n) => n === 2, times)).toEqual({ num: 2, status: 'ongoing' });
+  });
+
+  it('до переопределённой пары — первая доступная как upcoming', () => {
+    // 16:00 — первая пара ещё идёт, 2-я переопределена на 17:00, обе доступны
+    expect(getLectureTimeState(at('16:00'), (n) => [1, 2].includes(n), times)).toEqual({ num: 2, status: 'upcoming' });
+  });
+
+  it('getMinutesRemaining берёт время переопределённой пары', () => {
+    expect(getMinutesRemaining({ num: 2, status: 'ongoing' }, at('17:00'), times)).toBe(95);
+  });
+});
+
+describe('buildDayTimes', () => {
+  it('без переопределений -> базовое расписание', () => {
+    const times = buildDayTimes({ 3: { overrideTime: null } });
+    expect(times[1]).toBe('8:00 - 9:35');
+    expect(times[2]).toBe('9:50 - 11:25');
+    expect(times[3]).toBe('11:55 - 13:30');
+    expect(times[6]).toBe('17:40 - 19:15');
+  });
+
+  it('переопределение сдвигает следующие пары на +10 мин (95 мин пара)', () => {
+    const times = buildDayTimes({ 3: { overrideTime: '17:00' } });
+    expect(times[3]).toBe('17:00 - 18:35');
+    expect(times[4]).toBe('18:45 - 20:20');
+    expect(times[5]).toBe('20:30 - 22:05');
+    expect(times[6]).toBe('22:15 - 23:50');
+  });
+
+  it('пары до переопределения не трогаем', () => {
+    const times = buildDayTimes({ 3: { overrideTime: '17:00' } });
+    expect(times[1]).toBe('8:00 - 9:35');
+    expect(times[2]).toBe('9:50 - 11:25');
+  });
+
+  it('повторное переопределение встаёт на своё время и ведёт следующие за собой', () => {
+    const times = buildDayTimes({ 2: { overrideTime: '17:00' }, 4: { overrideTime: '20:00' } });
+    expect(times[2]).toBe('17:00 - 18:35');
+    expect(times[3]).toBe('18:45 - 20:20');
+    expect(times[4]).toBe('20:00 - 21:35');
+    expect(times[5]).toBe('21:45 - 23:20');
+    expect(times[6]).toBe('23:30 - 01:05');
+  });
+
+  it('два значения времени задают и длительность пары, от которой считаем сдвиг', () => {
+    const times = buildDayTimes({ 2: { overrideTime: '17:00-19:00' } });
+    expect(times[2]).toBe('17:00 - 19:00');
+    expect(times[3]).toBe('19:10 - 20:45');
+  });
+});
+
+describe('diffSchedule учитывает overrideTime', () => {
+  const base = (over = {}) => ({
+    week: 'upper',
+    day: 'вт',
+    lectureNumber: 2,
+    discipline: 'Высшая математика',
+    format: 'практ',
+    teacher: 'Каплицкий',
+    audience: '502',
+    subgroup: '',
+    ...over,
+  });
+
+  it('изменённое время пары -> old/new', () => {
+    const a = [base({ overrideTime: null })];
+    const b = [base({ overrideTime: '17:00 - 18:35' })];
+    const diff = diffSchedule(a, b);
+    expect(diff.upper.вт[2].old.overrideTime).toBeNull();
+    expect(diff.upper.вт[2].new.overrideTime).toBe('17:00 - 18:35');
   });
 });
 

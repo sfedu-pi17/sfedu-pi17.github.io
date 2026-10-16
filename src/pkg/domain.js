@@ -15,6 +15,83 @@ export const LECTURE_TIMES = {
   6: '17:40 - 19:15',
 };
 
+// Минуты к «ЧЧ:ММ» (переход через час/сутки учитывается, но для расписания это лишь
+// прибавка к началу пары, так что часы редко выходят за 0..23).
+function addMinutes(hhmm, mins) {
+  const [h, m] = hhmm.split(':').map(Number);
+  const total = h * 60 + m + mins;
+  return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+// Переопределение времени пары из данных: одно значение («17:00») — только начало,
+// конец = +95 мин; два значения («17:00-19:00» или «17:00 – 19:00») — начало и конец.
+// Возвращает span-строку в том же виде, что LECTURE_TIMES («17:00 - 18:35»), либо null.
+export function normalizeOverrideTime(raw) {
+  const value = String(raw ?? '').trim();
+  if (!value) return null;
+  const times = value.split(/\s*[-–—]\s*/).map((part) => part.trim()).filter(Boolean);
+  const start = times[0];
+  if (!start) return null;
+  const end = times.length > 1 ? times[1] : addMinutes(start, 95);
+  return `${start} - ${end}`;
+}
+
+// Минтуы {start, end} из span-строки «17:00 - 19:15»; null при некорректном значении.
+function parseSpanMinutes(span) {
+  if (!span) return null;
+  const [start, end] = span.split('-').map((part) => {
+    const [h, m] = part.trim().split(':').map(Number);
+    return h * 60 + m;
+  });
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+  return { start, end };
+}
+
+// Диапазоны звонков из карты «номер пары -> время» для функций состояния времени.
+function buildRanges(times) {
+  return Object.entries(times)
+    .map(([num, span]) => {
+      const parsed = parseSpanMinutes(span);
+      return parsed ? { num: Number(num), ...parsed } : null;
+    })
+    .filter(Boolean);
+}
+
+// Минуты от полуночи -> «ЧЧ:ММ» для span-строки.
+function formatSpan(start, end) {
+  const fmt = (mins) =>
+    `${String(Math.floor(mins / 60) % 24).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+  return `${fmt(start)} - ${fmt(end)}`;
+}
+
+// Актуальное время каждой пары дня с учётом каскадного сдвига. Первое переопределение
+// задаёт точку, дальше пары «тащатся» за ним: до него идут по базовому расписанию звонков,
+// после — из конца предыдущей + 10 минут перерыва (пара = 95 мин), пока следующая пара
+// снова не задаст своё время. dayMap — «номер пары -> record».
+export function buildDayTimes(dayMap) {
+  const times = {};
+  let prevEnd = null;
+  let cascading = false;
+  for (let num = 1; num <= 6; num++) {
+    const override = normalizeOverrideTime(dayMap[num]?.overrideTime);
+    if (override) {
+      times[num] = override;
+      prevEnd = parseSpanMinutes(override)?.end ?? null;
+      cascading = true;
+    } else if (!cascading) {
+      // До первого переопределения (и когда его нет) — базовое расписание звонков.
+      times[num] = LECTURE_TIMES[num];
+      prevEnd = parseSpanMinutes(LECTURE_TIMES[num]).end;
+    } else {
+      const start = prevEnd + 10;
+      const end = start + 95;
+      times[num] = formatSpan(start, end);
+      prevEnd = end;
+    }
+  }
+  return times;
+}
+
 // Выделить название дисциплины и тип занятия из строки вида
 // «Технологии и фронтиры в области комп. наук и ИИ (лекция)».
 export function parseDiscipline(raw) {
@@ -136,49 +213,34 @@ export function isCancelledOn(cancelDate, date) {
 }
 
 // Номер пары, которая идёт прямо сейчас (если текущее время попадает в её диапазон),
-// иначе null.
-export function getCurrentLectureNumber(date = new Date()) {
+// иначе null. times — карта «номер пары -> время» (по умолчанию базовое расписание),
+// чтобы учитывать переопределение времени отдельной пары.
+export function getCurrentLectureNumber(date = new Date(), times = LECTURE_TIMES) {
   const mins = date.getHours() * 60 + date.getMinutes();
-  const ranges = Object.entries(LECTURE_TIMES).map(([num, span]) => {
-    const [start, end] = span.split('-').map((part) => {
-      const [h, m] = part.trim().split(':').map(Number);
-      return h * 60 + m;
-    });
-    return { num: Number(num), start, end };
-  });
-  const found = ranges.find((r) => mins >= r.start && mins < r.end);
+  const found = buildRanges(times).find((r) => mins >= r.start && mins < r.end);
   return found ? found.num : null;
 }
 
 // Состояние времени относительно звонков: какая пара идёт сейчас ('ongoing') или
 // какая начнётся следующей во время перемены ('upcoming'); null — когда подходящих
 // пар больше нет. isAvailable(num) говорит, есть ли у пары запись и не отменена ли
-// она. Пустые и отменённые пары пропускаем: если сейчас время отменённой пары или
-// перемена, показываем следующую актуальную (upcoming) и подсвечиваем её начало.
-export function getLectureTimeState(date = new Date(), isAvailable = () => true) {
+// она; times — карта «номер пары -> время» для учёта переопределения. Пустые и
+// отменённые пары пропускаем: если сейчас время отменённой пары или перемена,
+// показываем следующую актуальную (upcoming) и подсвечиваем её начало.
+export function getLectureTimeState(date = new Date(), isAvailable = () => true, times = LECTURE_TIMES) {
   const mins = date.getHours() * 60 + date.getMinutes();
-  const ranges = Object.entries(LECTURE_TIMES).map(([num, span]) => {
-    const [start, end] = span.split('-').map((part) => {
-      const [h, m] = part.trim().split(':').map(Number);
-      return h * 60 + m;
-    });
-    return { num: Number(num), start, end };
-  });
-  const found = ranges.find((r) => isAvailable(r.num) && mins < r.end);
+  const found = buildRanges(times).find((r) => isAvailable(r.num) && mins < r.end);
   if (!found) return null;
   return { num: found.num, status: mins < found.start ? 'upcoming' : 'ongoing' };
 }
 
 // Сколько минут осталось до конца идущей пары ('ongoing') или до начала следующей
 // ('upcoming'); null, если время уже вышло. Используется для подписи под временем.
-export function getMinutesRemaining(state, date = new Date()) {
+export function getMinutesRemaining(state, date = new Date(), times = LECTURE_TIMES) {
   if (!state) return null;
-  const span = LECTURE_TIMES[state.num];
-  const [start, end] = span.split('-').map((part) => {
-    const [h, m] = part.trim().split(':').map(Number);
-    return h * 60 + m;
-  });
-  const target = state.status === 'ongoing' ? end : start;
+  const span = parseSpanMinutes(times[state.num]);
+  if (!span) return null;
+  const target = state.status === 'ongoing' ? span.end : span.start;
   const delta = target - (date.getHours() * 60 + date.getMinutes());
   return delta > 0 ? delta : null;
 }
@@ -193,6 +255,7 @@ function entriesEqual(a, b) {
     a.audience === b.audience &&
     a.subgroup === b.subgroup &&
     a.cancelDate === b.cancelDate &&
+    a.overrideTime === b.overrideTime &&
     a.week === b.week &&
     a.day === b.day &&
     a.lectureNumber === b.lectureNumber
