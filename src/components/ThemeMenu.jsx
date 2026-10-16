@@ -1,11 +1,20 @@
 import { ActionIcon, Menu, useMantineColorScheme, useComputedColorScheme } from '@mantine/core';
-import { IconSun, IconMoon, IconDeviceLaptop, IconCheck, IconSettings } from '@tabler/icons-react';
+import {
+  IconSun,
+  IconMoon,
+  IconDeviceLaptop,
+  IconCheck,
+  IconSettings,
+  IconDownload,
+} from '@tabler/icons-react';
+import { useInstallPrompt } from '@/hooks/useInstallPrompt.js';
 
 export default function ThemeMenu() {
   // Mantine — единственный источник правды. defaultColorScheme="auto" в MantineProvider
   // заставляет приложение следовать системной теме, выбор в меню переключает явно.
   const { colorScheme, setColorScheme } = useMantineColorScheme();
   const isLight = useComputedColorScheme('light') === 'light';
+  const { canInstall, promptInstall } = useInstallPrompt();
 
   return (
     <Menu shadow="md" width={200}>
@@ -45,6 +54,14 @@ export default function ThemeMenu() {
         >
           Темная
         </Menu.Item>
+        {canInstall && (
+          <>
+            <Menu.Divider />
+            <Menu.Item leftSection={<IconDownload size={14} />} onClick={promptInstall}>
+              Установить app
+            </Menu.Item>
+          </>
+        )}
       </Menu.Dropdown>
     </Menu>
   );

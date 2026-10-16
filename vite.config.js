@@ -47,6 +47,13 @@ export default defineConfig({
               networkTimeoutSeconds: 3,
               expiration: { maxEntries: 1, maxAgeSeconds: 60 * 60 * 24 * 14 },
               cacheableResponse: { statuses: [0, 200] },
+              // При офлайне запрос встаёт в очередь и «догоняет» свежий CSV при
+              // появлении сети. Работает на Android/desktop; на iOS Safari sync-событие
+              // не стреляет — записи просто лежат в IndexedDB (без вреда).
+              backgroundSync: {
+                name: 'schedule-csv-sync',
+                options: { maxRetentionTime: 60 * 24 }, // минуты = 1 день
+              },
             },
           },
         ],

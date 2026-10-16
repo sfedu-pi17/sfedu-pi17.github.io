@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Card, Text, Loader, Container, Group } from '@mantine/core';
 import { IconAlertCircle } from '@tabler/icons-react';
 import {
@@ -40,8 +40,12 @@ export default function Timetable() {
   // По умолчанию — текущая неделя и текущий день.
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDay, setSelectedDay] = useState(() => getTodayDayCode());
-  const todayDay = useMemo(() => getTodayDayCode(), []);
-  const currentWeek = useMemo(() => getCurrentWeekType(), []);
+  // Текущее время: обновляем каждую минуту и при возврате к приложению, чтобы
+  // текущий день/неделя и метка пары не устаревали.
+  const [now, setNow] = useState(() => new Date());
+  // Даты/неделя зависят от now: смена суток или недели отслеживается без перезагрузки.
+  const todayDay = useMemo(() => getTodayDayCode(now), [now]);
+  const currentWeek = useMemo(() => getCurrentWeekType(now), [now]);
   // Тип показанной недели для расписания: чётный сдвиг — та же, нечётный — противоположная.
   const week = weekOffset % 2 === 0 ? currentWeek : currentWeek === 'upper' ? 'lower' : 'upper';
   // Зелёная обводка дня недели актуальна только когда показана текущая неделя.
@@ -52,9 +56,6 @@ export default function Timetable() {
 
   // Новое расписание, ещё не записанное в кэш: сохраняем только после «ОК» в режиме изменений.
   const pendingData = useRef(null);
-
-  // Текущее время: обновляем, чтобы метка текущей пары не устаревала.
-  const [now, setNow] = useState(() => new Date());
   // Счётчик «до начала/до конца» должен обновляться ровно в начале каждой минуты, а не
   // каждые 30с. Первый тик — setTimeout до круглой минуты, дальше — setInterval в 60с:
   // в момент перехода на новую минуту мы уже точно в её начале.
@@ -82,14 +83,13 @@ export default function Timetable() {
   // Подсветка текущей/следующей пары осмысленна только для сегодняшнего дня в текущей неделе.
   const isTodayView = isCurrentWeek && selectedDay === todayDay;
 
-  useEffect(() => {
-    // Старые данные на момент загрузки — для сравнения изменений.
+  // Загрузка свежего CSV: показываем кэш, в фоне подтягиваем и диффим.
+  // Вынесена в useCallback, чтобы вызывать и на монтировании, и при возврате
+  // к приложению (focus/visibilitychange/online) без ручной перезагрузки.
+  const refresh = useCallback(() => {
     const oldData = loadScheduleCache();
-    let cancelled = false;
     fetchScheduleCsv()
       .then((csvText) => {
-        console.log(csvText)
-        if (cancelled) return;
         const data = parseScheduleCsv(csvText);
         const diffed = diffSchedule(oldData, data);
         // Если есть изменения — не сохраняем кэш, ждём подтверждения «ОК»;
@@ -108,16 +108,41 @@ export default function Timetable() {
       })
       .catch((err) => {
         console.error('Ошибка загрузки CSV:', err);
-        if (!cancelled) {
-          setRefreshing(false);
-          setError(true);
-          setToastVisible(true);
-        }
+        setRefreshing(false);
+        setError(true);
+        // Офлайн не пугаем тостом — в хедере уже крутится лоадер.
+        if (navigator.onLine) setToastVisible(true);
       });
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  // Автообновление при возврате к приложению: почти то же, что ручная перезагрузка —
+  // пересчитываем время/даты и дотягиваем свежий CSV.
+  useEffect(() => {
+    let timer;
+    const trigger = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        refresh();
+        setNow(new Date());
+      }, 1500); // дебаунс: не спамить при частых переключениях вкладок
+    };
+    const onVisible = () => {
+      if (!document.hidden) trigger();
+    };
+    window.addEventListener('focus', trigger);
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', trigger);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('focus', trigger);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', trigger);
+    };
+  }, [refresh]);
 
   // Записи текущей недели, сгруппированные по дню и номеру пары.
   const weekDayMap = useMemo(() => groupByWeekDay(schedule, week), [schedule, week]);
