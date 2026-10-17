@@ -27,7 +27,7 @@ export default defineConfig({
         display: 'standalone',
         background_color: '#ffffff',
         // theme_color = нейтральный фон светлой темы; тёмная (#161616) задаётся рантайм-тегом.
-        theme_color: '#e9ecef',
+        theme_color: '#161616',
         icons: [
           { src: '/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: '/web-app-manifest-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
