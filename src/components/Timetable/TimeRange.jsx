@@ -13,17 +13,14 @@ export default function TimeRange({ value, highlight, breakTime }) {
   return (
     <span className="timeRange">
       <span className={highlightStart ? 'timeStart timeActive' : 'timeStart'}>{start}</span>
-      {breakTime && (
-        <>
-          <span className="timeSep">–</span>
-          <span className="timeBreakInline">
-            <IconCoffee size={10} stroke={1.8} />
-            {breakTime}
-          </span>
-        </>
-      )}
       {end && <span className="timeSep">–</span>}
       {end && <span className={highlightEnd ? 'timeEnd timeActive' : 'timeEnd'}>{end}</span>}
+      {breakTime && (
+        <span className="timeBreakInline">
+          <IconCoffee size={10} stroke={1.8} />
+          {breakTime}
+        </span>
+      )}
     </span>
   );
 }

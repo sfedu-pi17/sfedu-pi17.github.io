@@ -266,9 +266,30 @@
 
 .scheduleRow > .colNumTime .timeRange {
   grid-column: 2;
-  /* Время переносится, когда колонка сужается, а не обрезается */
-  white-space: normal;
-  overflow-wrap: break-word;
+  justify-self: end;
+  /* На широком экране время «8:00 - 9:35» — первой строкой, перерыв — второй */
+  display: grid;
+  grid-template-columns: auto auto auto;
+  grid-template-rows: auto auto;
+}
+
+/* Раскладка внутри .timeRange: начало – конец на первой строке, перерыв на второй
+   (на узком экране перекроется столбиком через order) */
+.scheduleRow > .colNumTime .timeRange .timeStart {
+  grid-column: 1;
+  grid-row: 1;
+}
+.scheduleRow > .colNumTime .timeRange .timeSep {
+  grid-column: 2;
+  grid-row: 1;
+}
+.scheduleRow > .colNumTime .timeRange .timeEnd {
+  grid-column: 3;
+  grid-row: 1;
+}
+.scheduleRow > .colNumTime .timeRange .timeBreakInline {
+  grid-column: 1 / -1;
+  grid-row: 2;
   justify-self: end;
 }
 
@@ -292,9 +313,8 @@
   line-height: 1.2;
 }
 
-/* Время внутреннего перерыва — внутри диапазона пары, между началом и концом.
-   На широком экране встаёт в одну строку («8:00 – ☕ 08:45 – 9:35»), на узком
-   время уже свёрнуто в столбик — ложится между началом и концом. */
+/* Время внутреннего перерыва — вторым рядом под временем пары (на широком) или
+   между началом и концом в столбике (на узком, через order). */
 .scheduleRow > .colNumTime .timeRange .timeBreakInline {
   display: inline-flex;
   align-items: center;
@@ -504,14 +524,25 @@
     font-size: 11px;
     padding-top: 6px;
     padding-bottom: 6px;
+    padding-right: 8px;
   }
-  /* На узком экране время «8:00 - 9:35» свернуто в столбик, дефис скрыт */
+  /* На узком экране время «8:00 - 9:35» свернуто в столбик, дефис скрыт.
+     order возвращает перерыв между началом и концом (в DOM он после конца). */
   .scheduleRow > .colNumTime .timeRange {
     display: flex;
     flex-direction: column;
     gap: 0;
     line-height: 1.1;
     align-items: flex-end;
+  }
+  .scheduleRow > .colNumTime .timeRange .timeStart {
+    order: 1;
+  }
+  .scheduleRow > .colNumTime .timeRange .timeBreakInline {
+    order: 2;
+  }
+  .scheduleRow > .colNumTime .timeRange .timeEnd {
+    order: 3;
   }
   .scheduleRow > .colNumTime .timeSep {
     display: none;
