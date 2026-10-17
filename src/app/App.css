@@ -3,6 +3,7 @@
 .appMain {
   display: flex;
   flex-direction: column;
+  padding-top: calc(var(--app-shell-header-offset, 0rem));
 }
 
 /* Общая серая «оболочка» для шапки и фона: карточка расписания (белая, с тенью)
