@@ -1,6 +1,6 @@
 import { Text, Menu } from '@mantine/core';
 import { IconDotsVertical } from '@tabler/icons-react';
-import { isSummerBreak, isCancelledOn, formatTeacher, isForeignLanguage, foreignKey } from '@/pkg/domain.js';
+import { isSummerBreak, isCancelledOn, formatTeacher, isSelectableRecord } from '@/pkg/domain.js';
 import TimeRange from './TimeRange.jsx';
 import { ChangedDiscipline, ChangedAudience } from './DiffCells.jsx';
 import { formatRemainingLabel, isNumericAudience } from './utils.js';
@@ -12,9 +12,9 @@ import { formatRemainingLabel, isNumericAudience } from './utils.js';
 // глобальной — соседние недели могут содержать свой diff.
 // pane.times — актуальное время каждой пары дня с каскадным сдвигом переопределений;
 // по нему же считаем подпись «до конца/начала», чтобы она шла по реальному времени.
-export default function PaneRows({ pane, changes, now, highlight, foreign }) {
+export default function PaneRows({ pane, changes, now, highlight, pairSel }) {
   const { day, week, weekDayMap, dayDates, times } = pane;
-  const { selectedKey, select, clear, isActive } = foreign || { selectedKey: null, isActive: () => true, select: () => {}, clear: () => {} };
+  const { toggle, isActive, isInactive } = pairSel || { toggle: () => {}, isActive: () => true, isInactive: () => false };
   const weekChanges = changes[week] || {};
   const pairChange = (day, num) => weekChanges[day]?.[num] || null;
   const lectureRemaining = highlight ? formatRemainingLabel(highlight, now, times) : null;
@@ -26,18 +26,18 @@ export default function PaneRows({ pane, changes, now, highlight, foreign }) {
     const entry = summerBreak ? null : weekDayMap[day][number];
     const change = summerBreak ? null : pairChange(day, number);
     const cancelled = isCancelledOn(entry?.cancelDate, dayDates[day]);
-    // Иностранная пара: точки меню и затемнение невыбранных. Ключ — englishLang (группа),
-    // поэтому та же группа в другой неделе остаётся «активной», а другие — гаснут.
-    const isForeign = isForeignLanguage(entry);
-    const fKey = isForeign ? foreignKey(entry) : null;
-    const isDimmed = isForeign && !isActive(fKey);
+    // Селектабельная пара: точки меню и затемнение исключённых. По умолчанию на пару ходим;
+    // пользователь сам исключает те, на которые не пойдёт. Каждая пара независима.
+    const sel = isSelectableRecord(entry);
+    const activePair = isActive(entry); // по умолчанию true, пока не исключили
+    const inactivePair = isInactive(entry); // исключили «не ходить»
     const classes = [
       'scheduleRow',
       number === highlight?.num ? 'currentLecture' : null,
       change ? 'changedPair' : null,
       cancelled ? 'cancelledPair' : null,
-      isForeign ? 'foreignRow' : null,
-      isDimmed ? 'foreignDimmed' : null,
+      sel ? 'groupRow' : null,
+      inactivePair ? 'groupDimmed' : null,
     ]
       .filter(Boolean)
       .join(' ');
@@ -89,9 +89,9 @@ export default function PaneRows({ pane, changes, now, highlight, foreign }) {
             </span>
           )}
         </div>
-        {isForeign && (
+        {sel && (
           <div
-            className="foreignMenuWrap"
+            className="groupMenuWrap"
             // не даём клику по точкам начать свайп карусели (у неё pointer-обработчики выше)
             onPointerDown={(e) => e.stopPropagation()}
           >
@@ -99,19 +99,17 @@ export default function PaneRows({ pane, changes, now, highlight, foreign }) {
               <Menu.Target>
                 <button
                   type="button"
-                  className="foreignMenuBtn"
-                  aria-label={selectedKey === fKey ? 'Отменить выбор иностранной пары' : 'Выбрать иностранную пару'}
+                  className="groupMenuBtn"
+                  aria-label={activePair ? 'Не ходить на эту пару' : 'Ходить на эту пару'}
                 >
                   <IconDotsVertical size={16} />
                 </button>
               </Menu.Target>
               <Menu.Dropdown>
-                {/* Заголовок: что за пара, чтобы было понятно, к чему выбор */}
+                {/* Заголовок: какая пара, чтобы было понятно, к чему выбор */}
                 <Menu.Label>{entry.discipline}</Menu.Label>
-                <Menu.Item
-                  onClick={() => (selectedKey === fKey ? clear() : select(fKey))}
-                >
-                  {selectedKey === fKey ? 'Отменить выбор' : 'Ходить только на эту'}
+                <Menu.Item onClick={() => toggle(entry)}>
+                  {activePair ? 'Не ходить на эту' : 'Ходить на эту'}
                 </Menu.Item>
               </Menu.Dropdown>
             </Menu>

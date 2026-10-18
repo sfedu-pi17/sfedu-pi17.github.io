@@ -52,6 +52,11 @@ function parseCsv(text) {
   return rows;
 }
 
+// Флаги в CSV могут прийти как «TRUE»/«true», «1», «да» или пусто — привести к boolean.
+function parseBool(raw) {
+  return ['true', '1', 'yes', 'да', 'y'].includes(String(raw ?? '').trim().toLowerCase());
+}
+
 // Привести запись к единому виду и нормализовать типы.
 function normalizeRecord(rec) {
   // Формат занятия теперь отдельная колонка; парсинг скобок из дисциплины
@@ -72,9 +77,8 @@ function normalizeRecord(rec) {
     // Переопределённое время пары: одно значение — начало (+95 мин конца), два — диапазон.
     // Колонка может называться override_time или overrideTime.
     overrideTime: normalizeOverrideTime(rec.override_time ?? rec.overrideTime ?? ''),
-    // Отметка иностранного языка: непустая — это иностранная пара, значение — её группа.
-    // Колонка может называться englishLang или english_lang.
-    englishLang: (rec.englishLang ?? rec.english_lang ?? '').trim(),
+    // Можно ли выбрать пару (на какие ходить): колонка может быть is_selectable или isSelectable.
+    isSelectable: parseBool(rec.is_selectable ?? rec.isSelectable ?? ''),
   };
 }
 

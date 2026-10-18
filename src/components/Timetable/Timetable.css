@@ -379,22 +379,22 @@
   font-size: 14px;
 }
 
-/* Иностранная пара: справа внизу точки, по клику — выбор. Ряд надо позиционировать,
+/* Пара с группой: справа внизу точки, по клику — выбор группы. Ряд надо позиционировать,
    чтобы меню прижалось именно к его нижнему правому углу.
-   Затемнённые (невыбранные иностранные) — половину прозрачности на содержимое ячеек. */
-.scheduleRow.foreignRow {
+   Затемнённые (невыбранные группы той же дисциплины) — прозрачность на содержимое ячеек. */
+.scheduleRow.groupRow {
   position: relative;
 }
 
-.scheduleRow.foreignDimmed > .colNumTime,
-.scheduleRow.foreignDimmed > .subjectCell,
-.scheduleRow.foreignDimmed > .colAud {
+.scheduleRow.groupDimmed > .colNumTime,
+.scheduleRow.groupDimmed > .subjectCell,
+.scheduleRow.groupDimmed > .colAud {
   opacity: 0.2;
 }
 
 /* Обёртка меню: абсолютная, выпадает из grid-потока строки, иначе стала бы 4-й колонкой
    и сломала бы разметку. Прижата к нижнему правому углу, поверх остального содержимого. */
-.scheduleRow > .foreignMenuWrap {
+.scheduleRow > .groupMenuWrap {
   position: absolute;
   right: 4px;
   bottom: 2px;
@@ -405,8 +405,8 @@
 }
 
 /* Кнопка-точки: маленькая, нейтральная, без рамки, читаемая в обеих темах.
-   Прозрачность строки (.foreignDimmed) не трогаем — затемняются только ячейки. */
-.foreignMenuBtn {
+   Прозрачность строки (.groupDimmed) не трогаем — затемняются только ячейки. */
+.groupMenuBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -421,7 +421,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.foreignMenuBtn:hover {
+.groupMenuBtn:hover {
   background-color: var(--mantine-color-default-hover);
   color: var(--mantine-color-text);
 }

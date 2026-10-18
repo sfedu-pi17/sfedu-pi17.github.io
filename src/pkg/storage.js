@@ -40,23 +40,27 @@ export function saveScheduleCache(schedule) {
   }
 }
 
-// Выбранная иностранная пара, на которую ходим. Храним только её ключ (englishLang —
-// группа); пустого значения нет — при «ходить на всё» ключ удаляется. Это пользовательское
-// предпочтение, отдельно от кэша расписания, поэтому свой ключ и без envelope-версии.
-const FOREIGN_KEY = 'sfedu.selectedEnglish';
+// Пары, на которые НЕ ходим (исключённые) — список ключей «неделя|день|номер». По умолчанию
+// пара считается посещаемой, поэтому храним только «не ходить». Это пользовательское
+// предпочтение отдельно от кэша расписания, поэтому свой ключ и без envelope-версии.
+// Пустой список не храним.
+const DESELECTED_PAIRS_KEY = 'sfedu.deselectedPairs';
 
-export function loadSelectedEnglish() {
+export function loadDeselectedPairs() {
   try {
-    return localStorage.getItem(FOREIGN_KEY) || null;
+    const raw = localStorage.getItem(DESELECTED_PAIRS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return null;
+    return [];
   }
 }
 
-export function saveSelectedEnglish(key) {
+export function saveDeselectedPairs(keys) {
   try {
-    if (key) localStorage.setItem(FOREIGN_KEY, key);
-    else localStorage.removeItem(FOREIGN_KEY);
+    if (keys.length) localStorage.setItem(DESELECTED_PAIRS_KEY, JSON.stringify(keys));
+    else localStorage.removeItem(DESELECTED_PAIRS_KEY);
   } catch {
     // приватный режим / переполнение хранилища — игнорируем
   }

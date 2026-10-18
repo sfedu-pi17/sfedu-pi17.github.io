@@ -256,7 +256,7 @@ function entriesEqual(a, b) {
     a.subgroup === b.subgroup &&
     a.cancelDate === b.cancelDate &&
     a.overrideTime === b.overrideTime &&
-    a.englishLang === b.englishLang &&
+    a.isSelectable === b.isSelectable &&
     a.week === b.week &&
     a.day === b.day &&
     a.lectureNumber === b.lectureNumber
@@ -313,16 +313,15 @@ export function buildReviewSteps(changes, currentWeek) {
   return [...daysOf(currentWeek), ...daysOf(otherWeek)];
 }
 
-// «Иностранный язык» встречается несколько раз (разные группы/дни), а посещать нужно
-// только одну пару. Иностранная пара — та, чья дисциплина «Иностранный язык».
-export function isForeignLanguage(record) {
-  return record?.discipline === 'Иностранный язык';
+// Выбор пар, на которые ходим: у пары есть флаг «селектабельна» — это одна из нескольких
+// параллельных (та же дисциплина в разных подгруппах), и пользователь отмечает, на какие
+// пойдёт. Выбрать можно сколько угодно пар.
+export function isSelectableRecord(record) {
+  return !!record?.isSelectable;
 }
 
-// Ключ иностранной пары для выбора — englishLang (группа/язык): различает, какую именно
-// из иностранных пар посещаем, и у той же группы в другой неделе он одинаковый, поэтому
-// выбранная пара не «гаснет» при смене недели. Если колонки нет (englishLang пуст),
-// падаем на составной ключ пары, чтобы выбор всё равно работал.
-export function foreignKey(record) {
-  return record.englishLang || `${record.week}|${record.day}|${record.lectureNumber}`;
+// Ключ пары для выбора — неделя + день + номер. Верхняя и нижняя недели — отдельные
+// пары даже в том же слоте, поэтому выбор по неделям свой.
+export function pairKey(record) {
+  return `${record.week}|${record.day}|${record.lectureNumber}`;
 }

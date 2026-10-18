@@ -25,7 +25,7 @@ describe('parseScheduleCsv', () => {
       subgroup: '',
       cancelDate: '',
       overrideTime: null,
-      englishLang: '',
+      isSelectable: false,
     });
 
     expect(rows[1].format).toBe('практ');
@@ -92,13 +92,15 @@ describe('parseScheduleCsv', () => {
     expect(rows[0].overrideTime).toBeNull();
   });
 
-  it('отмечает иностранную пару полем english_lang', () => {
-    const csv = `week,day,lecture_number,discipline,format,teacher,auaudience,subgroup,english_lang
-верхняя,пн,1,Иностранный язык,,индивидуально,MS Teams,,англ.
+  it('парсит флаг isSelectable: TRUE/1 -> true, пусто -> false', () => {
+    const csv = `week,day,lecture_number,discipline,format,teacher,auaudience,subgroup,is_selectable
+верхняя,пн,1,Иностранный язык,,индивидуально,MS Teams,,TRUE
 верхняя,пн,2,Физика,лек,Иванов,101,,
+верхняя,пн,3,Матанализ,практ,Петров,102,,1
 `;
     const rows = parseScheduleCsv(csv);
-    expect(rows[0].englishLang).toBe('англ.');
-    expect(rows[1].englishLang).toBe('');
+    expect(rows[0].isSelectable).toBe(true);
+    expect(rows[1].isSelectable).toBe(false);
+    expect(rows[2].isSelectable).toBe(true);
   });
 });

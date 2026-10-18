@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
-import { loadScheduleCache, saveScheduleCache, loadSelectedEnglish, saveSelectedEnglish } from './storage.js';
+import { loadScheduleCache, saveScheduleCache, loadDeselectedPairs, saveDeselectedPairs } from './storage.js';
 
 // Мок localStorage поднимаем на уровень модуля, чтобы оба describe (кэш и выбор
 // иностранной пары) делили один и тот же изолированный стор.
@@ -62,20 +62,20 @@ describe('кэш в localStorage', () => {
   });
 });
 
-describe('выбор иностранной пары', () => {
-  it('без выбора -> null', () => {
-    expect(loadSelectedEnglish()).toBeNull();
+describe('исключённые пары (не ходить)', () => {
+  it('по умолчанию список пуст', () => {
+    expect(loadDeselectedPairs()).toEqual([]);
   });
 
-  it('сохраняет и загружает ключ', () => {
-    saveSelectedEnglish('англ.');
-    expect(loadSelectedEnglish()).toBe('англ.');
+  it('сохраняет и загружает список ключей', () => {
+    saveDeselectedPairs(['upper|пн|1', 'lower|ср|2']);
+    expect(loadDeselectedPairs()).toEqual(['upper|пн|1', 'lower|ср|2']);
   });
 
-  it('пустой ключ -> сбрасывает выбор', () => {
-    saveSelectedEnglish('англ.');
-    saveSelectedEnglish(null);
-    expect(loadSelectedEnglish()).toBeNull();
-    expect(localStorage.getItem('sfedu.selectedEnglish')).toBeNull();
+  it('пустой список -> сбрасывает выбор', () => {
+    saveDeselectedPairs(['upper|пн|1']);
+    saveDeselectedPairs([]);
+    expect(loadDeselectedPairs()).toEqual([]);
+    expect(localStorage.getItem('sfedu.deselectedPairs')).toBeNull();
   });
 });
