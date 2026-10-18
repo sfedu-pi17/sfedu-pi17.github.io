@@ -89,3 +89,23 @@ export function saveGymPairs(keys) {
     // приватный режим / переполнение хранилища — игнорируем
   }
 }
+
+// Версия «что нового», которую пользователь уже подтвердил. Пишем её при нажатии «ОК»,
+// чтобы модалка не показывалась повторно на тот же релиз. Отдельный ключ, без envelope.
+const WHATS_NEW_KEY = 'sfedu.whatsNewVersion';
+
+export function loadSeenVersion() {
+  try {
+    return localStorage.getItem(WHATS_NEW_KEY) || null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveSeenVersion(version) {
+  try {
+    localStorage.setItem(WHATS_NEW_KEY, version);
+  } catch {
+    // приватный режим / переполнение хранилища — игнорируем
+  }
+}

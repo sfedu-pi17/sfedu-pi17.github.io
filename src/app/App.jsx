@@ -1,6 +1,7 @@
 import { AppShell, Group, Title, Loader } from '@mantine/core';
 import ThemeMenu from '@/components/ThemeMenu.jsx';
 import Timetable from '@/components/Timetable/index.jsx';
+import WhatsNewModal from '@/components/WhatsNewModal.jsx';
 import { useIsOnline } from '@/hooks/useIsOnline.js';
 import { useScheduleStatus } from '@/hooks/useScheduleStatus.js';
 import '@mantine/core/styles.css';
@@ -13,19 +14,22 @@ export default function App() {
   // фоновая догрузка расписания (isRefreshing из источника данных).
   const showLoader = isRefreshing || !isOnline;
   return (
-    <AppShell header={{ height: 48 }} padding="sm" withBorder={false}>
-      <AppShell.Header className="appHeader">
-        <Group justify="space-between" h="100%" px="md">
-          <Group gap="xs">
-            <Title order={3}>Расписание</Title>
-            {showLoader && <Loader size="xs" />}
+    <>
+      <AppShell header={{ height: 48 }} padding="sm" withBorder={false}>
+        <AppShell.Header className="appHeader">
+          <Group justify="space-between" h="100%" px="md">
+            <Group gap="xs">
+              <Title order={3}>Расписание</Title>
+              {showLoader && <Loader size="xs" />}
+            </Group>
+            <ThemeMenu />
           </Group>
-          <ThemeMenu />
-        </Group>
-      </AppShell.Header>
-      <AppShell.Main className="appMain">
-        <Timetable />
-      </AppShell.Main>
-    </AppShell>
+        </AppShell.Header>
+        <AppShell.Main className="appMain">
+          <Timetable />
+        </AppShell.Main>
+      </AppShell>
+      <WhatsNewModal />
+    </>
   );
 }
