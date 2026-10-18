@@ -13,6 +13,7 @@ import {
   diffSchedule,
   isSelectableRecord,
   pairKey,
+  getSlotState,
 } from './domain.js';
 
 describe('parseDiscipline', () => {
@@ -384,5 +385,67 @@ describe('выбор пары', () => {
     const a = [eng];
     const b = [{ ...eng, isSelectable: false }];
     expect(diffSchedule(a, b).upper.пн[1].new.isSelectable).toBe(false);
+  });
+});
+
+describe('состояние слота', () => {
+  const eng = { week: 'upper', day: 'пн', lectureNumber: 1, discipline: 'Иностранный язык', isSelectable: true };
+  const math = { week: 'upper', day: 'вт', lectureNumber: 2, discipline: 'Матанализ', isSelectable: false };
+  const empty = { week: 'upper', day: 'ср', lectureNumber: 3 };
+  // Предикаты-заглушки: getSlotState прокидывает слот, но для логики важны только флаги.
+  const preds = ({ inactive = false, gym = false } = {}) => ({
+    isActive: () => !inactive,
+    isInactive: () => inactive,
+    isGym: () => gym,
+  });
+
+  it('посещаемая селектабельная пара: только счёт, без физ-ры и затемнения', () => {
+    const s = getSlotState(eng, { week: 'upper', day: 'пн', lectureNumber: 1, ...preds() });
+    expect(s.slot).toEqual({ week: 'upper', day: 'пн', lectureNumber: 1 });
+    expect(s.sel).toBe(true);
+    expect(s.active).toBe(true);
+    expect(s.gym).toBe(false);
+    expect(s.showGymItem).toBe(false);
+    expect(s.rowMenu).toBe(true);
+    expect(s.dimmed).toBe(false);
+  });
+
+  it('«не ходить»: затемнение + возможность поставить физ-ру', () => {
+    const s = getSlotState(eng, { week: 'upper', day: 'пн', lectureNumber: 1, ...preds({ inactive: true }) });
+    expect(s.active).toBe(false);
+    expect(s.dimmed).toBe(true);
+    expect(s.showGymItem).toBe(true);
+    expect(s.gymItemLabel).toBe('Поставить физ-ру');
+  });
+
+  it('пустая пара: меню одно, доступно только поставить физ-ру', () => {
+    const s = getSlotState(empty, { week: 'upper', day: 'ср', lectureNumber: 3, ...preds() });
+    expect(s.sel).toBe(false);
+    expect(s.rowMenu).toBe(true);
+    expect(s.showGymItem).toBe(true);
+    expect(s.gymItemLabel).toBe('Поставить физ-ру');
+  });
+
+  it('физ-ра поверх «не ходить»: не затемняется, пункт «Убрать физ-ру»', () => {
+    const s = getSlotState(eng, { week: 'upper', day: 'пн', lectureNumber: 1, ...preds({ inactive: true, gym: true }) });
+    expect(s.gym).toBe(true);
+    expect(s.dimmed).toBe(false);
+    expect(s.showGymItem).toBe(true);
+    expect(s.gymItemLabel).toBe('Убрать физ-ру');
+  });
+
+  it('обычная неселектабельная пара: меню нет', () => {
+    const s = getSlotState(math, { week: 'upper', day: 'вт', lectureNumber: 2, ...preds() });
+    expect(s.sel).toBe(false);
+    expect(s.rowMenu).toBe(false);
+    expect(s.showGymItem).toBe(false);
+  });
+
+  it('пустая пара с физ-рой: меню остаётся, действие — убрать', () => {
+    const s = getSlotState(empty, { week: 'upper', day: 'ср', lectureNumber: 3, ...preds({ gym: true }) });
+    expect(s.gym).toBe(true);
+    expect(s.rowMenu).toBe(true);
+    expect(s.showGymItem).toBe(true);
+    expect(s.gymItemLabel).toBe('Убрать физ-ру');
   });
 });

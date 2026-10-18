@@ -1,6 +1,6 @@
 import { Text, Menu } from '@mantine/core';
 import { IconDotsVertical } from '@tabler/icons-react';
-import { isSummerBreak, isCancelledOn, formatTeacher, isSelectableRecord } from '@/pkg/domain.js';
+import { isSummerBreak, isCancelledOn, formatTeacher, getSlotState } from '@/pkg/domain.js';
 import TimeRange from './TimeRange.jsx';
 import { ChangedDiscipline, ChangedAudience } from './DiffCells.jsx';
 import { formatRemainingLabel, isNumericAudience } from './utils.js';
@@ -27,28 +27,17 @@ export default function PaneRows({ pane, changes, now, highlight, pairSel, gymSe
     const entry = summerBreak ? null : weekDayMap[day][number];
     const change = summerBreak ? null : pairChange(day, number);
     const cancelled = isCancelledOn(entry?.cancelDate, dayDates[day]);
-    // Селектабельная пара: точки меню и затемнение исключённых. По умолчанию на пару ходим;
-    // пользователь сам исключает те, на которые не пойдёт. Каждая пара независима.
-    const sel = isSelectableRecord(entry);
-    // Слот для выбора/физ-ры: даже у пустого слота есть неделя/день/номер — по нему
-    // ключ тот же, что у пары (pairKey = неделя|день|номер), поэтому «не ходить» и
-    // физ-ра адресуются одинаково.
-    const slotRecord = { week, day, lectureNumber: number };
-    const empty = !entry?.discipline; // пустая пара (нет дисциплины)
-    const activePair = isActive(slotRecord); // по умолчанию true, пока не исключили
-    const inactivePair = isInactive(slotRecord); // исключили «не ходить»
-    const gym = isGym(slotRecord); // на слот поставили физ-ру
-    // Меню физ-ры — одно действие: «Поставить» на пустую/«не ходить» (если физ-ры ещё нет),
-    // «Убрать», если стоит. Пункт показываем, когда слот пустой, исключён или с физ-рой.
-    const showGymItem = gym || empty || inactivePair;
-    const gymItemLabel = gym ? 'Убрать физ-ру' : 'Поставить физ-ру';
-    // Одна кнопка-точки на пару: показываем, если в меню есть хоть одно действие —
-    // выбрать пару (селектабельная), свободная, исключённая или с физ-рой.
-    const rowMenu = sel || empty || inactivePair || gym;
+    // Состояние слота (пустой/«не ходить»/физ-ра/посещаемая) и доступные действия меню —
+    // чистая функция в domain.js. Тут только читаем результат и дергаем выбранные ходы:
+    // toggle() для «не ходить», removeGym()/addGym() для физ-ры.
+    const { slot, sel, active, gym, rowMenu, showGymItem, gymItemLabel, dimmed } = getSlotState(
+      entry,
+      { week, day, lectureNumber: number, isActive, isInactive, isGym },
+    );
     // «Поставить {дисциплину}» отменяет физ-ру: пара снова посещается, слой физ-ры убираем.
     const toggleAttendance = () => {
-      toggle(slotRecord);
-      if (!activePair) removeGym(slotRecord);
+      toggle(slot);
+      if (!active) removeGym(slot);
     };
     const classes = [
       'scheduleRow',
@@ -56,9 +45,7 @@ export default function PaneRows({ pane, changes, now, highlight, pairSel, gymSe
       change ? 'changedPair' : null,
       cancelled ? 'cancelledPair' : null,
       rowMenu ? 'groupRow' : null,
-      // Затемняем только когда пара исключена и на неё не поставлена физ-ра: иначе
-      // затемнился бы и цветной блок физ-ры. Слой физ-ры независим от «не ходить».
-      inactivePair && !gym ? 'groupDimmed' : null,
+      dimmed ? 'groupDimmed' : null,
     ]
       .filter(Boolean)
       .join(' ');
@@ -139,13 +126,13 @@ export default function PaneRows({ pane, changes, now, highlight, pairSel, gymSe
               <Menu.Dropdown>
                 {sel && (
                   <Menu.Item onClick={toggleAttendance}>
-                    {activePair
+                    {active
                       ? `Убрать ${entry?.discipline || 'эту пару'}`
                       : `Поставить ${entry?.discipline || 'эту пару'}`}
                   </Menu.Item>
                 )}
                 {showGymItem && (
-                  <Menu.Item onClick={() => (gym ? removeGym(slotRecord) : addGym(slotRecord))}>
+                  <Menu.Item onClick={() => (gym ? removeGym(slot) : addGym(slot))}>
                     {gymItemLabel}
                   </Menu.Item>
                 )}

@@ -325,3 +325,23 @@ export function isSelectableRecord(record) {
 export function pairKey(record) {
   return `${record.week}|${record.day}|${record.lectureNumber}`;
 }
+
+// Состояние слота строки расписания: какие действия доступны в меню и как отобразить строку.
+// Чистая функция — предикаты выбора пары/физ-ры передаются параметрами, поэтому не зависит
+// от стора. Возвращает ключ слота (единый для «не ходить» и физ-ры) и флаги для вёрстки.
+export function getSlotState(entry, { week, day, lectureNumber, isActive, isInactive, isGym }) {
+  const slot = { week, day, lectureNumber };
+  const sel = isSelectableRecord(entry);
+  const empty = !entry?.discipline;
+  const active = isActive(slot);
+  const inactive = isInactive(slot);
+  const gym = isGym(slot);
+  // Физ-ру можно поставить на пустую пару или «не ходить», убрать — если она стоит.
+  const showGymItem = gym || empty || inactive;
+  const gymItemLabel = gym ? 'Убрать физ-ру' : 'Поставить физ-ру';
+  // Кнопка-точки нужна, если в меню есть хотя бы одно действие: выбрать пару, поставить
+  // физ-ру или освободить слот. Ряд затемняем только когда пара исключена и физ-ры нет.
+  const rowMenu = sel || empty || inactive || gym;
+  const dimmed = inactive && !gym;
+  return { slot, sel, active, gym, rowMenu, showGymItem, gymItemLabel, dimmed };
+}
