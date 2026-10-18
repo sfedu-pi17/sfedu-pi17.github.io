@@ -256,6 +256,7 @@ function entriesEqual(a, b) {
     a.subgroup === b.subgroup &&
     a.cancelDate === b.cancelDate &&
     a.overrideTime === b.overrideTime &&
+    a.englishLang === b.englishLang &&
     a.week === b.week &&
     a.day === b.day &&
     a.lectureNumber === b.lectureNumber
@@ -310,4 +311,18 @@ export function buildReviewSteps(changes, currentWeek) {
         }))
       : [];
   return [...daysOf(currentWeek), ...daysOf(otherWeek)];
+}
+
+// «Иностранный язык» встречается несколько раз (разные группы/дни), а посещать нужно
+// только одну пару. Иностранная пара — та, чья дисциплина «Иностранный язык».
+export function isForeignLanguage(record) {
+  return record?.discipline === 'Иностранный язык';
+}
+
+// Ключ иностранной пары для выбора — englishLang (группа/язык): различает, какую именно
+// из иностранных пар посещаем, и у той же группы в другой неделе он одинаковый, поэтому
+// выбранная пара не «гаснет» при смене недели. Если колонки нет (englishLang пуст),
+// падаем на составной ключ пары, чтобы выбор всё равно работал.
+export function foreignKey(record) {
+  return record.englishLang || `${record.week}|${record.day}|${record.lectureNumber}`;
 }

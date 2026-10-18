@@ -1,28 +1,30 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
-import { loadScheduleCache, saveScheduleCache } from './storage.js';
+import { loadScheduleCache, saveScheduleCache, loadSelectedEnglish, saveSelectedEnglish } from './storage.js';
+
+// Мок localStorage поднимаем на уровень модуля, чтобы оба describe (кэш и выбор
+// иностранной пары) делили один и тот же изолированный стор.
+function createStorageMock() {
+  let store = {};
+  return {
+    getItem: (k) => (k in store ? store[k] : null),
+    setItem: (k, v) => {
+      store[k] = String(v);
+    },
+    removeItem: (k) => {
+      delete store[k];
+    },
+  };
+}
+
+beforeEach(() => {
+  globalThis.localStorage = createStorageMock();
+});
+
+afterAll(() => {
+  delete globalThis.localStorage;
+});
 
 describe('кэш в localStorage', () => {
-  function createStorageMock() {
-    let store = {};
-    return {
-      getItem: (k) => (k in store ? store[k] : null),
-      setItem: (k, v) => {
-        store[k] = String(v);
-      },
-      removeItem: (k) => {
-        delete store[k];
-      },
-    };
-  }
-
-  beforeEach(() => {
-    globalThis.localStorage = createStorageMock();
-  });
-
-  afterAll(() => {
-    delete globalThis.localStorage;
-  });
-
   it('сохраняет и загружает расписание', () => {
     const data = [{ week: 'upper', day: 'пн', lectureNumber: 1 }];
     saveScheduleCache(data);
@@ -57,5 +59,23 @@ describe('кэш в localStorage', () => {
     localStorage.setItem('sfedu.schedule', JSON.stringify([{ week: 'upper', day: 'пн', lectureNumber: 1 }]));
     expect(loadScheduleCache()).toEqual([]);
     expect(localStorage.getItem('sfedu.schedule')).toBeNull();
+  });
+});
+
+describe('выбор иностранной пары', () => {
+  it('без выбора -> null', () => {
+    expect(loadSelectedEnglish()).toBeNull();
+  });
+
+  it('сохраняет и загружает ключ', () => {
+    saveSelectedEnglish('англ.');
+    expect(loadSelectedEnglish()).toBe('англ.');
+  });
+
+  it('пустой ключ -> сбрасывает выбор', () => {
+    saveSelectedEnglish('англ.');
+    saveSelectedEnglish(null);
+    expect(loadSelectedEnglish()).toBeNull();
+    expect(localStorage.getItem('sfedu.selectedEnglish')).toBeNull();
   });
 });

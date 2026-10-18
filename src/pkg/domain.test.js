@@ -11,6 +11,8 @@ import {
   buildDayTimes,
   shiftDay,
   diffSchedule,
+  isForeignLanguage,
+  foreignKey,
 } from './domain.js';
 
 describe('parseDiscipline', () => {
@@ -358,5 +360,29 @@ describe('shiftDay', () => {
 
   it('неизвестный день возвращается как есть', () => {
     expect(shiftDay('вс', 0, 1)).toEqual({ day: 'вс', weekOffset: 0 });
+  });
+});
+
+describe('иностранный язык', () => {
+  const eng = { week: 'upper', day: 'пн', lectureNumber: 1, discipline: 'Иностранный язык', englishLang: 'англ.' };
+  const eng2 = { week: 'upper', day: 'вт', lectureNumber: 3, discipline: 'Иностранный язык', englishLang: 'франц.' };
+  const other = { week: 'upper', day: 'ср', lectureNumber: 2, discipline: 'Физика', englishLang: '' };
+
+  it('дисциплина «Иностранный язык» отмечает иностранную пару', () => {
+    expect(isForeignLanguage(eng)).toBe(true);
+    expect(isForeignLanguage(eng2)).toBe(true);
+    expect(isForeignLanguage(other)).toBe(false);
+  });
+
+  it('ключ — englishLang (та же группа по неделям); без него — составной ключ пары', () => {
+    expect(foreignKey(eng)).toBe('англ.');
+    expect(foreignKey({ ...eng, week: 'lower', day: 'пт', lectureNumber: 6 })).toBe('англ.');
+    expect(foreignKey(other)).toBe('upper|ср|2');
+  });
+
+  it('разная группа учитывается в diff', () => {
+    const a = [eng];
+    const b = [{ ...eng, englishLang: 'франц.' }];
+    expect(diffSchedule(a, b).upper.пн[1].new.englishLang).toBe('франц.');
   });
 });

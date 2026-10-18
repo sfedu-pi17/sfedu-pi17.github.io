@@ -11,8 +11,11 @@ import {
   buildReviewSteps,
   getDayDates,
   isCancelledOn,
+  isForeignLanguage,
+  foreignKey,
 } from '@/pkg/domain.js';
 import { useNow } from '@/hooks/useNow.js';
+import { useForeignSelection } from '@/hooks/useForeignSelection.js';
 import { useScheduleSource } from './useScheduleSource.js';
 import { useDayCarousel } from './useDayCarousel.js';
 import { weekForOffset } from './utils.js';
@@ -36,6 +39,8 @@ export default function Timetable() {
   } = useScheduleSource();
   // Текущее время: тикает каждую минуту и при возврате к приложению.
   const [now, refreshNow] = useNow();
+  // Иностранная пара, на которую ходим (из стора); выбранная — единственная не затемнённая.
+  const foreign = useForeignSelection();
 
   // По умолчанию — текущая неделя и текущий день.
   const [weekOffset, setWeekOffset] = useState(0);
@@ -115,7 +120,12 @@ export default function Timetable() {
   // отменённые пропускаем при подсветке, показывая следующую актуальную.
   const isAvailableLecture = (day, num) => {
     const entry = weekDayMap[day][num];
-    return !!entry?.discipline && !isCancelledOn(entry.cancelDate, dayDates[day]);
+    if (!entry?.discipline) return false;
+    if (isCancelledOn(entry.cancelDate, dayDates[day])) return false;
+    // Невыбранные иностранные пары не показываем как текущую/следующую и не считаем
+    // «до начала»: активной считается только та, которую выбрали для посещения.
+    if (isForeignLanguage(entry) && !foreign.isActive(foreignKey(entry))) return false;
+    return true;
   };
   // Во время перемены это будет следующая пара со статусом 'upcoming'.
   // times панели выбранного дня — чтобы подсветка шла по реальному (возможно сдвинутому) времени.
@@ -251,13 +261,13 @@ export default function Timetable() {
               }}
             >
               <div role="rowgroup" className="schedulePane">
-                <PaneRows pane={panes[0]} changes={changes} now={now} />
+                <PaneRows pane={panes[0]} changes={changes} now={now} foreign={foreign} />
               </div>
               <div role="rowgroup" className="schedulePane">
-                <PaneRows pane={panes[1]} changes={changes} now={now} highlight={lectureState} />
+                <PaneRows pane={panes[1]} changes={changes} now={now} highlight={lectureState} foreign={foreign} />
               </div>
               <div role="rowgroup" className="schedulePane">
-                <PaneRows pane={panes[2]} changes={changes} now={now} />
+                <PaneRows pane={panes[2]} changes={changes} now={now} foreign={foreign} />
               </div>
             </div>
           </div>

@@ -25,6 +25,7 @@ describe('parseScheduleCsv', () => {
       subgroup: '',
       cancelDate: '',
       overrideTime: null,
+      englishLang: '',
     });
 
     expect(rows[1].format).toBe('практ');
@@ -89,5 +90,15 @@ describe('parseScheduleCsv', () => {
   it('пустое переопределение времени -> null', () => {
     const rows = parseScheduleCsv(SAMPLE_CSV);
     expect(rows[0].overrideTime).toBeNull();
+  });
+
+  it('отмечает иностранную пару полем english_lang', () => {
+    const csv = `week,day,lecture_number,discipline,format,teacher,auaudience,subgroup,english_lang
+верхняя,пн,1,Иностранный язык,,индивидуально,MS Teams,,англ.
+верхняя,пн,2,Физика,лек,Иванов,101,,
+`;
+    const rows = parseScheduleCsv(csv);
+    expect(rows[0].englishLang).toBe('англ.');
+    expect(rows[1].englishLang).toBe('');
   });
 });

@@ -379,6 +379,53 @@
   font-size: 14px;
 }
 
+/* Иностранная пара: справа внизу точки, по клику — выбор. Ряд надо позиционировать,
+   чтобы меню прижалось именно к его нижнему правому углу.
+   Затемнённые (невыбранные иностранные) — половину прозрачности на содержимое ячеек. */
+.scheduleRow.foreignRow {
+  position: relative;
+}
+
+.scheduleRow.foreignDimmed > .colNumTime,
+.scheduleRow.foreignDimmed > .subjectCell,
+.scheduleRow.foreignDimmed > .colAud {
+  opacity: 0.2;
+}
+
+/* Обёртка меню: абсолютная, выпадает из grid-потока строки, иначе стала бы 4-й колонкой
+   и сломала бы разметку. Прижата к нижнему правому углу, поверх остального содержимого. */
+.scheduleRow > .foreignMenuWrap {
+  position: absolute;
+  right: 4px;
+  bottom: 2px;
+  padding: 0;
+  overflow: visible;
+  min-width: 0;
+  z-index: 2;
+}
+
+/* Кнопка-точки: маленькая, нейтральная, без рамки, читаемая в обеих темах.
+   Прозрачность строки (.foreignDimmed) не трогаем — затемняются только ячейки. */
+.foreignMenuBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--mantine-radius-sm);
+  background: transparent;
+  color: var(--mantine-color-dimmed);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.foreignMenuBtn:hover {
+  background-color: var(--mantine-color-default-hover);
+  color: var(--mantine-color-text);
+}
+
 /* Diff внутри пары: красное — удалено, зелёное — появилось */
 .diffOld {
   color: var(--mantine-color-red-6);

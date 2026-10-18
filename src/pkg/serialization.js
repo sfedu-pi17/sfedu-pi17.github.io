@@ -72,6 +72,9 @@ function normalizeRecord(rec) {
     // Переопределённое время пары: одно значение — начало (+95 мин конца), два — диапазон.
     // Колонка может называться override_time или overrideTime.
     overrideTime: normalizeOverrideTime(rec.override_time ?? rec.overrideTime ?? ''),
+    // Отметка иностранного языка: непустая — это иностранная пара, значение — её группа.
+    // Колонка может называться englishLang или english_lang.
+    englishLang: (rec.englishLang ?? rec.english_lang ?? '').trim(),
   };
 }
 

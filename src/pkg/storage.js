@@ -39,3 +39,25 @@ export function saveScheduleCache(schedule) {
     // приватный режим / переполнение хранилища — игнорируем
   }
 }
+
+// Выбранная иностранная пара, на которую ходим. Храним только её ключ (englishLang —
+// группа); пустого значения нет — при «ходить на всё» ключ удаляется. Это пользовательское
+// предпочтение, отдельно от кэша расписания, поэтому свой ключ и без envelope-версии.
+const FOREIGN_KEY = 'sfedu.selectedEnglish';
+
+export function loadSelectedEnglish() {
+  try {
+    return localStorage.getItem(FOREIGN_KEY) || null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveSelectedEnglish(key) {
+  try {
+    if (key) localStorage.setItem(FOREIGN_KEY, key);
+    else localStorage.removeItem(FOREIGN_KEY);
+  } catch {
+    // приватный режим / переполнение хранилища — игнорируем
+  }
+}
