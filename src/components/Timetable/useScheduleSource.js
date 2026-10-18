@@ -3,7 +3,7 @@ import { diffSchedule } from '@/pkg/domain.js';
 import { parseScheduleCsv } from '@/pkg/serialization.js';
 import { loadScheduleCache, saveScheduleCache } from '@/pkg/storage.js';
 import { fetchScheduleCsv } from '@/pkg/api.js';
-import { useScheduleStatus } from '@/hooks/useScheduleStatus.jsx';
+import { useScheduleStatus } from '@/hooks/useScheduleStatus.js';
 
 // Источник расписания: кэш + фоновая догрузка CSV и diff. Владеет данными, индикаторами
 // загрузки/ошибки и уведомлением об изменениях. Навигация по неделям/дням (weekOffset,

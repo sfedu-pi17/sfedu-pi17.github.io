@@ -2,7 +2,7 @@ import { AppShell, Group, Title, Loader } from '@mantine/core';
 import ThemeMenu from '@/components/ThemeMenu.jsx';
 import Timetable from '@/components/Timetable/index.jsx';
 import { useIsOnline } from '@/hooks/useIsOnline.js';
-import { useScheduleStatus } from '@/hooks/useScheduleStatus.jsx';
+import { useScheduleStatus } from '@/hooks/useScheduleStatus.js';
 import '@mantine/core/styles.css';
 import './App.css';
 

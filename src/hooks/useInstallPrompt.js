@@ -6,6 +6,9 @@ export function useInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   useEffect(() => {
     const onBeforeInstallPrompt = (e) => {
+      // Гасим системный чип «Установить приложение», чтобы показывать только
+      // свой пункт в меню темы, а не дублировать нативный UI.
+      e.preventDefault();
       setDeferredPrompt(e);
     };
     const onAppInstalled = () => setDeferredPrompt(null);

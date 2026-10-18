@@ -14,6 +14,7 @@ import {
 } from '@/pkg/domain.js';
 import { useNow } from '@/hooks/useNow.js';
 import { usePairSelection } from '@/hooks/usePairSelection.js';
+import { useGymPairs } from '@/hooks/useGymPairs.js';
 import { useScheduleSource } from './useScheduleSource.js';
 import { useDayCarousel } from './useDayCarousel.js';
 import { weekForOffset } from './utils.js';
@@ -39,6 +40,8 @@ export default function Timetable() {
   const [now, refreshNow] = useNow();
   // Выбранные пары, на которые ходим (из стора); выбрать можно сколько угодно.
   const pairSel = usePairSelection();
+  // Пользовательская физ-ра, вставленная в слоты; показывается поверх расписания.
+  const gymSel = useGymPairs();
 
   // По умолчанию — текущая неделя и текущий день.
   const [weekOffset, setWeekOffset] = useState(0);
@@ -259,13 +262,13 @@ export default function Timetable() {
               }}
             >
               <div role="rowgroup" className="schedulePane">
-                <PaneRows pane={panes[0]} changes={changes} now={now} pairSel={pairSel} />
+                <PaneRows pane={panes[0]} changes={changes} now={now} pairSel={pairSel} gymSel={gymSel} />
               </div>
               <div role="rowgroup" className="schedulePane">
-                <PaneRows pane={panes[1]} changes={changes} now={now} highlight={lectureState} pairSel={pairSel} />
+                <PaneRows pane={panes[1]} changes={changes} now={now} highlight={lectureState} pairSel={pairSel} gymSel={gymSel} />
               </div>
               <div role="rowgroup" className="schedulePane">
-                <PaneRows pane={panes[2]} changes={changes} now={now} pairSel={pairSel} />
+                <PaneRows pane={panes[2]} changes={changes} now={now} pairSel={pairSel} gymSel={gymSel} />
               </div>
             </div>
           </div>

@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
-import { loadScheduleCache, saveScheduleCache, loadDeselectedPairs, saveDeselectedPairs } from './storage.js';
+import {
+  loadScheduleCache,
+  saveScheduleCache,
+  loadDeselectedPairs,
+  saveDeselectedPairs,
+  loadGymPairs,
+  saveGymPairs,
+} from './storage.js';
 
 // Мок localStorage поднимаем на уровень модуля, чтобы оба describe (кэш и выбор
 // иностранной пары) делили один и тот же изолированный стор.
@@ -77,5 +84,23 @@ describe('исключённые пары (не ходить)', () => {
     saveDeselectedPairs([]);
     expect(loadDeselectedPairs()).toEqual([]);
     expect(localStorage.getItem('sfedu.deselectedPairs')).toBeNull();
+  });
+});
+
+describe('физ-ра в слотах', () => {
+  it('по умолчанию список пуст', () => {
+    expect(loadGymPairs()).toEqual([]);
+  });
+
+  it('сохраняет и загружает список ключей', () => {
+    saveGymPairs(['upper|пн|1', 'lower|ср|2']);
+    expect(loadGymPairs()).toEqual(['upper|пн|1', 'lower|ср|2']);
+  });
+
+  it('пустой список -> сбрасывает выбор', () => {
+    saveGymPairs(['upper|пн|1']);
+    saveGymPairs([]);
+    expect(loadGymPairs()).toEqual([]);
+    expect(localStorage.getItem('sfedu.gymPairs')).toBeNull();
   });
 });

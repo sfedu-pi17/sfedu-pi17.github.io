@@ -4,7 +4,7 @@ import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import { MantineProvider } from '@mantine/core'
 import { theme } from '../pkg/theme.js'
-import { ScheduleStatusProvider } from '@/hooks/useScheduleStatus.jsx'
+import { ScheduleStatusProvider } from '@/components/ScheduleStatusProvider.jsx'
 import App from './App.jsx'
 
 registerSW({ immediate: true })

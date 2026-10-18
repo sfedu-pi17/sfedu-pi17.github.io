@@ -65,3 +65,27 @@ export function saveDeselectedPairs(keys) {
     // приватный режим / переполнение хранилища — игнорируем
   }
 }
+
+// Пользовательская физ-ра, вставленная в слоты — список ключей «неделя|день|номер».
+// Это отдельный слой поверх расписания, независимый от «не ходить». Свой ключ, без envelope.
+const GYM_KEY = 'sfedu.gymPairs';
+
+export function loadGymPairs() {
+  try {
+    const raw = localStorage.getItem(GYM_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveGymPairs(keys) {
+  try {
+    if (keys.length) localStorage.setItem(GYM_KEY, JSON.stringify(keys));
+    else localStorage.removeItem(GYM_KEY);
+  } catch {
+    // приватный режим / переполнение хранилища — игнорируем
+  }
+}

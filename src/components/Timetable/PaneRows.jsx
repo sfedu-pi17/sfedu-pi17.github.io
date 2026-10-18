@@ -12,9 +12,10 @@ import { formatRemainingLabel, isNumericAudience } from './utils.js';
 // глобальной — соседние недели могут содержать свой diff.
 // pane.times — актуальное время каждой пары дня с каскадным сдвигом переопределений;
 // по нему же считаем подпись «до конца/начала», чтобы она шла по реальному времени.
-export default function PaneRows({ pane, changes, now, highlight, pairSel }) {
+export default function PaneRows({ pane, changes, now, highlight, pairSel, gymSel }) {
   const { day, week, weekDayMap, dayDates, times } = pane;
   const { toggle, isActive, isInactive } = pairSel || { toggle: () => {}, isActive: () => true, isInactive: () => false };
+  const { addGym, removeGym, isGym } = gymSel || { addGym: () => {}, removeGym: () => {}, isGym: () => false };
   const weekChanges = changes[week] || {};
   const pairChange = (day, num) => weekChanges[day]?.[num] || null;
   const lectureRemaining = highlight ? formatRemainingLabel(highlight, now, times) : null;
@@ -29,15 +30,35 @@ export default function PaneRows({ pane, changes, now, highlight, pairSel }) {
     // Селектабельная пара: точки меню и затемнение исключённых. По умолчанию на пару ходим;
     // пользователь сам исключает те, на которые не пойдёт. Каждая пара независима.
     const sel = isSelectableRecord(entry);
-    const activePair = isActive(entry); // по умолчанию true, пока не исключили
-    const inactivePair = isInactive(entry); // исключили «не ходить»
+    // Слот для выбора/физ-ры: даже у пустого слота есть неделя/день/номер — по нему
+    // ключ тот же, что у пары (pairKey = неделя|день|номер), поэтому «не ходить» и
+    // физ-ра адресуются одинаково.
+    const slotRecord = { week, day, lectureNumber: number };
+    const empty = !entry?.discipline; // пустая пара (нет дисциплины)
+    const activePair = isActive(slotRecord); // по умолчанию true, пока не исключили
+    const inactivePair = isInactive(slotRecord); // исключили «не ходить»
+    const gym = isGym(slotRecord); // на слот поставили физ-ру
+    // Меню физ-ры — одно действие: «Поставить» на пустую/«не ходить» (если физ-ры ещё нет),
+    // «Убрать», если стоит. Пункт показываем, когда слот пустой, исключён или с физ-рой.
+    const showGymItem = gym || empty || inactivePair;
+    const gymItemLabel = gym ? 'Убрать физ-ру' : 'Поставить физ-ру';
+    // Одна кнопка-точки на пару: показываем, если в меню есть хоть одно действие —
+    // выбрать пару (селектабельная), свободная, исключённая или с физ-рой.
+    const rowMenu = sel || empty || inactivePair || gym;
+    // «Поставить {дисциплину}» отменяет физ-ру: пара снова посещается, слой физ-ры убираем.
+    const toggleAttendance = () => {
+      toggle(slotRecord);
+      if (!activePair) removeGym(slotRecord);
+    };
     const classes = [
       'scheduleRow',
       number === highlight?.num ? 'currentLecture' : null,
       change ? 'changedPair' : null,
       cancelled ? 'cancelledPair' : null,
-      sel ? 'groupRow' : null,
-      inactivePair ? 'groupDimmed' : null,
+      rowMenu ? 'groupRow' : null,
+      // Затемняем только когда пара исключена и на неё не поставлена физ-ра: иначе
+      // затемнился бы и цветной блок физ-ры. Слой физ-ры независим от «не ходить».
+      inactivePair && !gym ? 'groupDimmed' : null,
     ]
       .filter(Boolean)
       .join(' ');
@@ -62,26 +83,40 @@ export default function PaneRows({ pane, changes, now, highlight, pairSel }) {
           </span>}
         </div>
         <div role="cell" className="subjectCell">
-          {cancelled && <span className="cancelBadge">отменена</span>}
-          {change ? (
-            <ChangedDiscipline change={change} />
-          ) : entry?.discipline ? (
+          {gym ? (
             <>
-              <div className="subjectName">
-                {entry.discipline}
-                {entry.format && <span className="formatText"> ({entry.format})</span>}
-                {entry.subgroup && <span className="subgroupText">{entry.subgroup}</span>}
-              </div>
-              {entry.teacher && <div className="subjectTeacher">{formatTeacher(entry.teacher)}</div>}
+              {/* Физ-ра отображается как обычная дисциплина (.subjectName); ниже зачёркнутая
+                  пометка, какую пару она перекрывает. Точек у физ-ры нет — меню одно у строки. */}
+              <div className="subjectName">Физ-ра</div>
+              {entry?.discipline && <div className="replacedBlock">{entry.discipline}</div>}
             </>
           ) : (
-            <Text size="sm" c="dimmed">
-              —
-            </Text>
+            <>
+              {cancelled && <span className="cancelBadge">отменена</span>}
+              {change ? (
+                <ChangedDiscipline change={change} />
+              ) : entry?.discipline ? (
+                <>
+                  <div className="subjectName">
+                    {entry.discipline}
+                    {entry.format && <span className="formatText"> ({entry.format})</span>}
+                    {entry.subgroup && <span className="subgroupText">{entry.subgroup}</span>}
+                  </div>
+                  {entry.teacher && <div className="subjectTeacher">{formatTeacher(entry.teacher)}</div>}
+                </>
+              ) : (
+                <Text size="sm" c="dimmed">
+                  —
+                </Text>
+              )}
+            </>
           )}
         </div>
         <div role="cell" className="colAud">
-          {change ? (
+          {gym ? (
+            // У физ-ры нет аудитории — оставляем ячейку пустой, время не трогаем.
+            <span className="audText"></span>
+          ) : change ? (
             <ChangedAudience change={change} />
           ) : (
             <span className={isNumericAudience(entry?.audience) ? 'audNum' : 'audText'}>
@@ -89,28 +124,31 @@ export default function PaneRows({ pane, changes, now, highlight, pairSel }) {
             </span>
           )}
         </div>
-        {sel && (
+        {rowMenu && (
           <div
             className="groupMenuWrap"
             // не даём клику по точкам начать свайп карусели (у неё pointer-обработчики выше)
             onPointerDown={(e) => e.stopPropagation()}
           >
-            <Menu position="top-end" shadow="md" width={230}>
+            <Menu position="top-end" shadow="md" width={230} classNames={{ dropdown: 'pairMenu' }}>
               <Menu.Target>
-                <button
-                  type="button"
-                  className="groupMenuBtn"
-                  aria-label={activePair ? 'Не ходить на эту пару' : 'Ходить на эту пару'}
-                >
+                <button type="button" className="groupMenuBtn" aria-label="Действия пары">
                   <IconDotsVertical size={16} />
                 </button>
               </Menu.Target>
               <Menu.Dropdown>
-                {/* Заголовок: какая пара, чтобы было понятно, к чему выбор */}
-                <Menu.Label>{entry.discipline}</Menu.Label>
-                <Menu.Item onClick={() => toggle(entry)}>
-                  {activePair ? 'Не ходить на эту' : 'Ходить на эту'}
-                </Menu.Item>
+                {sel && (
+                  <Menu.Item onClick={toggleAttendance}>
+                    {activePair
+                      ? `Убрать ${entry?.discipline || 'эту пару'}`
+                      : `Поставить ${entry?.discipline || 'эту пару'}`}
+                  </Menu.Item>
+                )}
+                {showGymItem && (
+                  <Menu.Item onClick={() => (gym ? removeGym(slotRecord) : addGym(slotRecord))}>
+                    {gymItemLabel}
+                  </Menu.Item>
+                )}
               </Menu.Dropdown>
             </Menu>
           </div>
