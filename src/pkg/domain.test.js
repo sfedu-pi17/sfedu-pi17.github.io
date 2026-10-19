@@ -7,6 +7,7 @@ import {
   getCurrentLectureNumber,
   getLectureTimeState,
   getMinutesRemaining,
+  getPairBreakInfo,
   normalizeOverrideTime,
   buildDayTimes,
   shiftDay,
@@ -177,6 +178,31 @@ describe('getMinutesRemaining', () => {
   it('время вышло или нет состояния -> null', () => {
     expect(getMinutesRemaining(null, at('09:00'))).toBeNull();
     expect(getMinutesRemaining({ num: 1, status: 'ongoing' }, at('09:36'))).toBeNull();
+  });
+});
+
+describe('getPairBreakInfo', () => {
+  const at = (hhmm) => {
+    const [h, m] = hhmm.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    return d;
+  };
+
+  it('перерыв идущей пары — через 45 мин от начала', () => {
+    // 1-я пара 8:00-9:35, перерыв в 8:45; в 8:20 до него 25 минут.
+    expect(getPairBreakInfo({ num: 1, status: 'ongoing' }, at('08:20'))).toEqual({ time: '08:45', remaining: 25 });
+    // 4-я пара 13:45-15:20, перерыв в 14:30.
+    expect(getPairBreakInfo({ num: 4, status: 'ongoing' }, at('14:00'))).toEqual({ time: '14:30', remaining: 30 });
+  });
+
+  it('после перерыва remaining <= 0', () => {
+    expect(getPairBreakInfo({ num: 1, status: 'ongoing' }, at('09:00'))).toEqual({ time: '08:45', remaining: -15 });
+  });
+
+  it('не идущая пара -> null', () => {
+    expect(getPairBreakInfo({ num: 2, status: 'upcoming' }, at('09:36'))).toBeNull();
+    expect(getPairBreakInfo(null, at('09:00'))).toBeNull();
   });
 });
 

@@ -57,11 +57,14 @@ function buildRanges(times) {
     .filter(Boolean);
 }
 
-// Минуты от полуночи -> «ЧЧ:ММ» для span-строки.
+// Минуты от полуночи -> «ЧЧ:ММ».
+function formatTime(mins) {
+  return `${String(Math.floor(mins / 60) % 24).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+}
+
+// Минуты от полуночи -> «ЧЧ:ММ - ЧЧ:ММ» для span-строки (начало и конец пары).
 function formatSpan(start, end) {
-  const fmt = (mins) =>
-    `${String(Math.floor(mins / 60) % 24).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
-  return `${fmt(start)} - ${fmt(end)}`;
+  return `${formatTime(start)} - ${formatTime(end)}`;
 }
 
 // Актуальное время каждой пары дня с учётом каскадного сдвига. Первое переопределение
@@ -243,6 +246,19 @@ export function getMinutesRemaining(state, date = new Date(), times = LECTURE_TI
   const target = state.status === 'ongoing' ? span.end : span.start;
   const delta = target - (date.getHours() * 60 + date.getMinutes());
   return delta > 0 ? delta : null;
+}
+
+// Внутренний перерыв пары: пара — это 2 академических часа по 45 минут, короткий
+// перерыв внутри через 45 минут от начала. Для идущей пары возвращает
+// { time: «ЧЧ:ММ» перерыва, remaining: минуты до него }, либо null, когда время
+// пары неизвестно или статус не 'ongoing'. remaining > 0 — перерыв ещё не наступил.
+export function getPairBreakInfo(state, date = new Date(), times = LECTURE_TIMES) {
+  if (state?.status !== 'ongoing') return null;
+  const span = parseSpanMinutes(times[state.num]);
+  if (!span) return null;
+  const breakMin = span.start + 45;
+  const nowMin = date.getHours() * 60 + date.getMinutes();
+  return { time: formatTime(breakMin), remaining: breakMin - nowMin };
 }
 
 // Сравнивает две записи пары по всем содержательным полям.

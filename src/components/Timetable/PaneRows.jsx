@@ -64,10 +64,13 @@ export default function PaneRows({ pane, changes, now, highlight, pairSel, gymSe
                   : 'start'
                 : null
             }
+            breakTime={highlight?.num === number ? lectureRemaining?.breakLabel || null : null}
           />
-          {highlight?.num === number && <span className="timeRemaining">
-            {lectureRemaining.label}&#32;<nobr>{lectureRemaining.time}</nobr>
-          </span>}
+          {highlight?.num === number && (
+            <span className="timeRemaining">
+              {lectureRemaining.label}&#32;<nobr>{lectureRemaining.time}</nobr>
+            </span>
+          )}
         </div>
         <div role="cell" className="subjectCell">
           {gym ? (

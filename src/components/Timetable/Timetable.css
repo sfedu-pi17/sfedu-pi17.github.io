@@ -165,7 +165,7 @@
 .scheduleHead,
 .scheduleRow {
   display: grid;
-  grid-template-columns: 120px 1fr 88px;
+  grid-template-columns: 125px 1fr 88px;
   min-height: 0;
 }
 
@@ -252,9 +252,9 @@
    чтобы выглядел легче и не выбивался */
 .scheduleRow > .colNumTime .lectureNum {
   grid-column: 1;
-  font-size: 32px;
+  font-size: 24px;
   font-weight: 300;
-  line-height: 1;
+  line-height: 0.9;
   color: var(--mantine-color-dimmed);
   opacity: 0.55;
 }
@@ -269,6 +269,7 @@
   /* Время переносится, когда колонка сужается, а не обрезается */
   white-space: normal;
   overflow-wrap: break-word;
+  justify-self: end;
 }
 
 /* Время текущей/следующей пары — жирное, чтобы его было видно во время перемены */
@@ -277,18 +278,29 @@
   color: var(--mantine-color-text);
 }
 
-/* Подпись под временем («до начала/до конца …») — второй строкой на всю ширину ячейки,
+/* Подпись под временем («до начала/до конца …») — вторым рядом на всю ширину ячейки,
    прижата к нижнему краю. Переносится, если не влезает: колонка узкая, nowrap обрезал бы. */
 .scheduleRow > .colNumTime .timeRemaining {
   grid-column: 1 / -1;
   grid-row: 2;
   align-self: end;
+  justify-self: start;
   font-size: 10px;
   font-weight: 500;
   color: var(--mantine-color-dimmed);
   white-space: normal;
   line-height: 1.2;
-  justify-self: flex-end;
+}
+
+/* Время внутреннего перерыва — внутри диапазона пары, между началом и концом.
+   На широком экране встаёт в одну строку («8:00 – ☕ 08:45 – 9:35»), на узком
+   время уже свёрнуто в столбик — ложится между началом и концом. */
+.scheduleRow > .colNumTime .timeRange .timeBreakInline {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--mantine-color-dimmed);
+  white-space: nowrap;
 }
 
 .scheduleRow > .colNumTime .timeSep {
@@ -486,16 +498,20 @@
 @media (max-width: 420px) {
   .scheduleHead,
   .scheduleRow {
-    grid-template-columns: 74px 1fr 54px;
+    grid-template-columns: 79px 1fr 54px;
   }
   .scheduleRow > .colNumTime {
     font-size: 11px;
+    padding-top: 6px;
+    padding-bottom: 6px;
   }
   /* На узком экране время «8:00 - 9:35» свернуто в столбик, дефис скрыт */
   .scheduleRow > .colNumTime .timeRange {
     display: flex;
     flex-direction: column;
     gap: 0;
+    line-height: 1.1;
+    align-items: flex-end;
   }
   .scheduleRow > .colNumTime .timeSep {
     display: none;
@@ -503,9 +519,10 @@
   }
   .scheduleRow > .colNumTime .timeRemaining {
     font-size: 9px;
-    text-align: right;
+    line-height: 1.1;
+    text-align: left;
   }
-  .scheduleHead > .colAud,
+    .scheduleHead > .colAud,
   .scheduleRow > .colAud {
     font-size: 11px;
   }

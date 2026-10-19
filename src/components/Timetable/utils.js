@@ -1,4 +1,4 @@
-import { getMinutesRemaining, LECTURE_TIMES } from '@/pkg/domain.js';
+import { getMinutesRemaining, getPairBreakInfo, LECTURE_TIMES } from '@/pkg/domain.js';
 
 export const DAY_LABELS = {
   пн: 'Пн',
@@ -15,7 +15,9 @@ export const formatDayDate = (d) =>
 
 // Подпись под временем актуальной пары: «до конца Xч Yм» для идущей пары,
 // «до начала …» для следующей. Нулевые часы/минуты не выводим, секунды (0 минут)
-// не показываем вовсе. times — карта «номер пары -> время» для пары с переопределением.
+// не показываем вовсе. У идущей пары добавляем «перерыв в ЧЧ:ММ», пока он ещё
+// не наступил (внутренний перерыв пары — через 45 мин от начала). times — карта
+// «номер пары -> время» для пары с переопределением.
 export const formatRemainingLabel = (state, date, times = LECTURE_TIMES) => {
   const mins = getMinutesRemaining(state, date, times);
   if (!mins) return null;
@@ -25,8 +27,10 @@ export const formatRemainingLabel = (state, date, times = LECTURE_TIMES) => {
   if (h) parts.push(`${h}ч`);
   if (m) parts.push(`${m}м`);
   const label = state.status === 'ongoing' ? 'до конца' : 'до начала';
+  const breakInfo = getPairBreakInfo(state, date, times);
   return {
-    label, time: parts.join(' ')
+    label, time: parts.join(' '),
+    breakLabel: breakInfo && breakInfo.remaining > 0 ? breakInfo.time : null,
   };
 };
 
