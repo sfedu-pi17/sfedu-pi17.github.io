@@ -140,12 +140,25 @@ function startOfWeek(date) {
   return d;
 }
 
+// Понедельник недели, которую считаем «текущей» для даты. Для воскресенья это
+// понедельник следующей недели: в воскресенье расписание уже открыто под будущую
+// неделю (завтра начинается новая), а не под только что закончившуюся — воскресенья
+// в расписании нет, и подсвечивать понедельник ушедшей недели некорректно.
+function startOfCurrentWeek(date) {
+  const d = new Date(date);
+  const diff = (d.getDay() + 6) % 7; // сколько дней прошло с понедельника этой недели
+  d.setDate(d.getDate() - diff);
+  if (date.getDay() === 0) d.setDate(d.getDate() + 7); // вс -> пн следующей недели
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
 // Какая неделя сейчас: 1 сентября — верхняя, далее чередуется.
 // Отсчитываем полные недели от недели, содержащей 1 сентября.
 export function getCurrentWeekType(date = new Date()) {
   const refDate = new Date(date.getFullYear(), 8, 1); // сентябрь = месяц 8
   const refMonday = startOfWeek(refDate);
-  const currentMonday = startOfWeek(date);
+  const currentMonday = startOfCurrentWeek(date);
   const diffWeeks = Math.round((currentMonday - refMonday) / (7 * 24 * 60 * 60 * 1000));
   const normalized = ((diffWeeks % 2) + 2) % 2; // всегда 0 или 1, без минусов
   return normalized === 0 ? 'upper' : 'lower';
@@ -162,7 +175,7 @@ export function getTodayDayCode(date = new Date()) {
 // Даты всех дней (пн..сб) для недели со сдвигом offset от текущей:
 // 0 — текущая неделя, +1 — следующая, -1 — предыдущая и т.д. (листается в обе стороны).
 export function getDayDates(offset, date = new Date()) {
-  const monday = new Date(startOfWeek(date).getTime() + offset * 7 * 24 * 60 * 60 * 1000);
+  const monday = new Date(startOfCurrentWeek(date).getTime() + offset * 7 * 24 * 60 * 60 * 1000);
   return Object.fromEntries(
     DAY_ORDER.map((day, i) => {
       const d = new Date(monday);

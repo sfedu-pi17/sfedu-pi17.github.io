@@ -4,6 +4,7 @@ import {
   formatTeacher,
   getCurrentWeekType,
   getTodayDayCode,
+  getDayDates,
   getCurrentLectureNumber,
   getLectureTimeState,
   getMinutesRemaining,
@@ -70,6 +71,14 @@ describe('getCurrentWeekType', () => {
     expect(getCurrentWeekType(new Date('2026-09-21'))).toBe('lower');
     expect(getCurrentWeekType(new Date('2026-09-30'))).toBe('upper');
   });
+
+  // Воскресенье — конец недели: приложение ориентируется на неделю, начавшуюся в
+  // следующий понедельник, а не на только что закончившуюся. Поэтому тип недели у
+  // воскресенья совпадает с типом следующего за ним понедельника.
+  it('воскресенье принадлежит следующей неделе', () => {
+    expect(getCurrentWeekType(new Date(2026, 8, 13))).toBe(getCurrentWeekType(new Date(2026, 8, 14)));
+    expect(getCurrentWeekType(new Date(2026, 8, 20))).toBe(getCurrentWeekType(new Date(2026, 8, 21)));
+  });
 });
 
 describe('getTodayDayCode', () => {
@@ -81,6 +90,22 @@ describe('getTodayDayCode', () => {
 
   it('воскресенье -> понедельник (в расписании нет вс)', () => {
     expect(getTodayDayCode(new Date('2026-09-13'))).toBe('пн');
+  });
+});
+
+describe('getDayDates', () => {
+  // В воскресенье показываемая неделя — следующая: она начинается с понедельника
+  // завтра, а не с понедельника только что закончившейся недели.
+  it('в воскресенье неделя начинается со следующего понедельника', () => {
+    const dates = getDayDates(0, new Date(2026, 8, 13));
+    expect(dates['пн'].getDate()).toBe(14);
+    expect(dates['сб'].getDate()).toBe(19);
+  });
+
+  it('в обычный день неделя начинается с понедельника этой недели', () => {
+    const dates = getDayDates(0, new Date(2026, 8, 16));
+    expect(dates['пн'].getDate()).toBe(14);
+    expect(dates['сб'].getDate()).toBe(19);
   });
 });
 
