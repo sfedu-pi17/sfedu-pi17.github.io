@@ -8,11 +8,23 @@
   padding: 0;
 }
 
+/* Фиксируем высоту вьюпорта вместо min-height: 100dvh, чтобы страница не росла,
+   когда мобильная адресная строка разворачивается/сворачивается и dvh с реальным
+   видимым вьюпортом расходятся. Иначе появлялась внешняя прокрутка с пустым местом
+   под расписанием (запас = высота адресной строки). Всю прокрутку берёт на себя
+   карточка расписания. */
+html,
+body {
+  height: 100%;
+  overscroll-behavior: none;
+}
+
 #root {
-  min-height: 100dvh;
+  height: 100dvh;
   width: 100%;
   position: relative;
   background-color: inherit;
+  overflow: hidden;
 
   display: flex;
   flex-direction: column;

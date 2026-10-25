@@ -178,15 +178,21 @@
 /* Растягиваем таблицу и убираем прокрутку у карточки, чтобы строки заполнили экран */
 .timetableContainer {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   width: 100%;
 }
 .timetableCard {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: auto;
+  /* Mantine Card по умолчанию ставит overflow: hidden (ради скругления) и идёт в
+     каскаде после нашего правила, поэтому перебиваем на auto. !important нужен,
+     чтобы карточка была единственным скролл-контейнером и расписание скроллилось
+     внутри, а не обрезалось при нехватке высоты. */
+  overflow: auto !important;
 }
 
 /* Ячейки */
