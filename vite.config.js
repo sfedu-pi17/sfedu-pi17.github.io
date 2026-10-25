@@ -28,8 +28,9 @@ export default defineConfig({
         background_color: '#161616',
         theme_color: '#161616',
         icons: [
-          { src: '/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/web-app-manifest-512x512.png', sizes: '512x512', type: 'image/png' },
+          // Прозрачная any — календарь на прозрачном фоне, подложку даёт сам сплэш/лаунчер.
+          { src: '/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/web-app-manifest-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
         ],
       },
       workbox: {
