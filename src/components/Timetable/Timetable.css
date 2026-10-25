@@ -184,6 +184,8 @@
   width: 100%;
 }
 .timetableCard {
+  position: relative;
+  z-index: 1;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -585,4 +587,56 @@
 /* В светлой теме делаем кнопки и дни недели чуть темнее */
 [data-mantine-color-scheme='light'] :is(.dayChip, .mutedBtn) {
   filter: brightness(0.96);
+}
+
+/* Обёртка pull-to-refresh: относительная, чтобы кружок позиционировался у верха. */
+.ptrWrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Стрелочка-индикатор: маленькая, сверху по центру. Едет вниз за пальцем (translateY = pull)
+   и крутится на столько градусов, на сколько протянули (rotate = pull * 2 в инлайне).
+   Во время перезагрузки (.ptrArrowSpin) — непрерывное вращение. */
+.ptrSpinner {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 36px;
+  height: 36px;
+  margin-left: -18px;
+  z-index: 2;
+  pointer-events: none;
+  /* Постоянный, короткий transition на возврат: при тяге почти не отстаёт от пальца
+     (малый лаг), а на отпускании даёт плавный возврат без прыжка. */
+  transition: transform 0.15s ease;
+}
+
+/* Кружок-подложка серый, сама стрелка белая (currentColor из svg). Кружок вращается вместе
+   со стрелкой, но он симметричный — заметно крутится только стрелка.
+   transition задаётся инлайном по settling (см. JSX): во время тяги его нет (следуем 1:1),
+   при отпускании — возврат с анимацией. */
+.ptrArrow {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--mantine-color-gray-9) 94%, transparent);
+  border-radius: 50%;
+  color: #fff;
+  transition: transform 0.15s ease;
+}
+
+.ptrArrowSpin {
+  animation: ptrSpin 0.8s linear infinite;
+}
+
+@keyframes ptrSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }

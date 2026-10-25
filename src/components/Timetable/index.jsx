@@ -13,6 +13,7 @@ import {
   isCancelledOn,
 } from '@/pkg/domain.js';
 import { useNow } from '@/hooks/useNow.js';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh.js';
 import { usePairSelection } from '@/hooks/usePairSelection.js';
 import { useGymPairs } from '@/hooks/useGymPairs.js';
 import { useScheduleSource } from './useScheduleSource.js';
@@ -42,6 +43,15 @@ export default function Timetable() {
   const pairSel = usePairSelection();
   // Пользовательская физ-ра, вставленная в слоты; показывается поверх расписания.
   const gymSel = useGymPairs();
+
+  // Обновление свайпом вниз: нативный pull-to-refresh отключён из-за overscroll-behavior: none,
+  // поэтому делаем свой. Свайп из любого места (но только сверху прокрутки). Вместо сдвига
+  // контента — закруглённая стрелочка: едет за пальцем и крутится пропорционально тяге. Перетянул
+  // порог и отпустил — перезагрузка, иначе стрелочка возвращается. Задержка перед reload,
+  // чтобы индикатор успел отрисоваться в момент отпускания.
+  const pullToRefresh = usePullToRefresh(() => {
+    setTimeout(() => window.location.reload(), 400);
+  });
 
   // По умолчанию — текущая неделя и текущий день.
   const [weekOffset, setWeekOffset] = useState(0);
@@ -195,7 +205,16 @@ export default function Timetable() {
 
   return (
     <Container size="md" px="0" className="timetableContainer">
-      <Card shadow="lg" withBorder radius="xl" py="sm" px="0" className="timetableCard">
+      <div className="ptrWrap">
+        <Card
+          shadow="lg"
+          withBorder
+          radius="xl"
+          py="sm"
+          px="0"
+          className="timetableCard"
+          {...pullToRefresh.handlers}
+        >
         {/* Уведомление об изменениях в расписании */}
         {showNotif && (
           <ChangesBanner
@@ -274,6 +293,34 @@ export default function Timetable() {
           </div>
         </div>
       </Card>
+
+        {/* Закруглённая стрелочка: едет за пальцем (translateY = pull) и крутится на столько
+             градусов, на сколько протянули (pull * 2); при перезагрузке — непрерывное вращение.
+             Контент не сдвигается, никакой подложки. */}
+        <div
+          className="ptrSpinner"
+          style={{
+            transform: `translateY(${pullToRefresh.pull}px)`,
+            opacity: Math.min(pullToRefresh.pull / pullToRefresh.threshold, 1),
+          }}
+        >
+          <div
+            className={pullToRefresh.refreshing ? 'ptrArrow ptrArrowSpin' : 'ptrArrow'}
+            style={
+              pullToRefresh.refreshing
+                ? undefined
+                : { transform: `rotate(${pullToRefresh.pull * 2}deg)` }
+            }
+          >
+            <svg viewBox="0 0 612 612" width="22" height="22" aria-hidden="true">
+              <path
+                d="M583.312,19.125C567.476,19.125,554.625,31.977,554.625,47.813v79.847C497.671,48.004,406.062,0,306,0C137.279,0,0,137.279,0,306s137.279,306,306,306c124.37,0,235.429-74.301,282.936-189.261c3.021-7.325,2.792-15.166-0.02-21.918c-2.812-6.789-8.224-12.507-15.567-15.548c-7.306-3.022-15.147-2.793-21.917,0.019c-6.771,2.812-12.489,8.243-15.53,15.549C497.308,494.267,407.057,554.625,306,554.625C168.912,554.625,57.375,443.088,57.375,306S168.912,57.375,306,57.375c85.795,0,163.901,43.471,209.399,114.75h-85.087c-15.836,0-28.688,12.852-28.688,28.688s12.852,28.688,28.688,28.688h153c15.836,0,28.688-12.852,28.688-28.688v-153C612,31.977,599.148,19.125,583.312,19.125z"
+                fill="currentColor"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
 
       {/* Всплывающее уведомление об ошибке обновления — скрывается через 10 секунд */}
       {toastVisible && (
