@@ -25,11 +25,19 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        background_color: '#161616',
-        theme_color: '#161616',
+        // Фон сплэша и заливка под иконку — один светло-серый (#e9ecef, как в мета
+        // theme-color в index.html). Маскейбл-заливка красит пустые пиксели прозрачной
+        // иконки в theme_color, и пока он был тёмным (#161616), вокруг глифа появлялся
+        // чёрный квадрат на сером фоне. Делаем заливку и фон одинаковыми — «квадрат»
+        // исчезает, глиф выглядит лежащим прямо на фоне.
+        background_color: '#e9ecef',
+        theme_color: '#e9ecef',
         icons: [
+          // purpose: 'any' (не maskable) — прозрачный фон PNG уважается: на сплэше
+          // календарь рисуется как есть, без тёмной подложки-квадрата. (Ценой этого
+          // лаунчер Android сам подберёт фон под глиф — тоже непрозрачный и ровный.)
           { src: '/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/web-app-manifest-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+          { src: '/web-app-manifest-512x512.png', sizes: '512x512', type: 'image/png' },
         ],
       },
       workbox: {
