@@ -17,7 +17,7 @@ export default defineConfig({
       // Ассеты, которые попадают в прекэш помимо сгенерированных (js/css/html).
       includeAssets: ['favicon.ico', 'favicon-96x96.png', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Расписание ЮФУ',
+        name: 'Расписание ПИ-1.7',
         short_name: 'Расписание',
         description: 'Электронное расписание группы ПИ-17 ЮФУ',
         lang: 'ru',
@@ -29,7 +29,7 @@ export default defineConfig({
         theme_color: '#161616',
         icons: [
           { src: '/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/web-app-manifest-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+          { src: '/web-app-manifest-512x512.png', sizes: '512x512', type: 'image/png' },
         ],
       },
       workbox: {
