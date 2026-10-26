@@ -599,8 +599,8 @@
 }
 
 /* Стрелочка-индикатор: маленькая, сверху по центру. Едет вниз за пальцем (translateY = pull)
-   и крутится на столько градусов, на сколько протянули (rotate = pull * 2 в инлайне).
-   Во время перезагрузки (.ptrArrowSpin) — непрерывное вращение. */
+   и крутится по часовой по мере тяги (spin в инлайне). При перезагрузке угол наращивается
+   по кадру в хуке — живое непрерывное вращение без CSS-анимации. */
 .ptrSpinner {
   position: absolute;
   top: 8px;
@@ -610,15 +610,12 @@
   margin-left: -18px;
   z-index: 2;
   pointer-events: none;
-  /* Постоянный, короткий transition на возврат: при тяге почти не отстаёт от пальца
-     (малый лаг), а на отпускании даёт плавный возврат без прыжка. */
-  transition: transform 0.15s ease;
 }
 
 /* Кружок-подложка серый, сама стрелка белая (currentColor из svg). Кружок вращается вместе
    со стрелкой, но он симметричный — заметно крутится только стрелка.
-   transition задаётся инлайном по settling (см. JSX): во время тяги его нет (следуем 1:1),
-   при отпускании — возврат с анимацией. */
+   transition на откат задаётся инлайном по settling (см. JSX): во время тяги его нет
+   (следуем за пальцем 1:1), при отпускании — плавный откат. */
 .ptrArrow {
   width: 100%;
   height: 100%;
@@ -628,15 +625,20 @@
   background: color-mix(in srgb, var(--mantine-color-gray-9) 94%, transparent);
   border-radius: 50%;
   color: #fff;
-  transition: transform 0.15s ease;
 }
 
-.ptrArrowSpin {
-  animation: ptrSpin 0.8s linear infinite;
-}
-
+/* Непрерывное вращение стрелки при перезагрузке. Стартует с угла тяги (--ptr-spin-from задан
+   инлайном), крутится по часовой бесконечно. Идёт на compositor-треде — JS не перерендеривает
+   расписание на каждом кадре, из-за чего стрелка раньше замирала. */
 @keyframes ptrSpin {
-  to {
-    transform: rotate(360deg);
+  from {
+    transform: rotate(var(--ptr-spin-from, 0deg));
   }
+  to {
+    transform: rotate(calc(var(--ptr-spin-from, 0deg) + 360deg));
+  }
+}
+
+.ptrArrow.ptrSpinning {
+  animation: ptrSpin 0.6s linear infinite;
 }

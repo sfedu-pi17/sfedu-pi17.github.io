@@ -294,23 +294,36 @@ export default function Timetable() {
         </div>
       </Card>
 
-        {/* Закруглённая стрелочка: едет за пальцем (translateY = pull) и крутится на столько
-             градусов, на сколько протянули (pull * 2); при перезагрузке — непрерывное вращение.
-             Контент не сдвигается, никакой подложки. */}
+        {/* Закруглённая стрелочка: едет за пальцем (translateY = pull) и крутится по часовой
+             по мере тяги (spin). При отпускании без порога — откатывается обратно (spin→0) и
+             тает; с порогом — сама непрерывно крутится по часовой до перезагрузки. */}
         <div
           className="ptrSpinner"
           style={{
             transform: `translateY(${pullToRefresh.pull}px)`,
             opacity: Math.min(pullToRefresh.pull / pullToRefresh.threshold, 1),
+            // Во время тяги — без transition (следуем за пальцем 1:1); при отпускании —
+            // плавный подъём (возврат) и плавное затухание. Возврат запускается кадром позже
+            // (см. хук), чтобы анимация реально стартовала.
+            transition: pullToRefresh.settling
+              ? 'transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.6s ease'
+              : 'none',
           }}
         >
           <div
-            className={pullToRefresh.refreshing ? 'ptrArrow ptrArrowSpin' : 'ptrArrow'}
-            style={
-              pullToRefresh.refreshing
-                ? undefined
-                : { transform: `rotate(${pullToRefresh.pull * 2}deg)` }
-            }
+            className={pullToRefresh.refreshing ? 'ptrArrow ptrSpinning' : 'ptrArrow'}
+            style={{
+              transform: `rotate(${pullToRefresh.spin}deg)`,
+              // Откат (spin→0) анимируем через transition. При перезагрузке transition выключен:
+              // угол держится на стартовом, а непрерывное вращение ведёт CSS-анимация .ptrSpinning
+              // (на compositor-треде, без JS-перерендеров тяжёлого расписания). --ptr-spin-from —
+              // стартовый угол, чтобы анимация стартовала с текущего положения стрелки, без прыжка.
+              transition:
+                pullToRefresh.settling && !pullToRefresh.refreshing
+                  ? 'transform 0.32s cubic-bezier(0.22, 1, 0.36, 1)'
+                  : 'none',
+              '--ptr-spin-from': `${pullToRefresh.spin}deg`,
+            }}
           >
             <svg viewBox="0 0 612 612" width="22" height="22" aria-hidden="true">
               <path
