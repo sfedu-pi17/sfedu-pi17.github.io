@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 
-// Общий контекст лоадера в шапке: источник данных пишет isRefreshing, шапка его читает.
+// Общий контекст индикатора обновления в шапке: источник данных пишет isRefreshing, шапка его читает.
 // Вынесен в отдельный файл без компонента, чтобы не смешивать экспорт хука и Provider
 // (react-refresh запрещает файлу экспортировать и компонент, и функцию в одном файле).
 export const ScheduleStatusContext = createContext(null);

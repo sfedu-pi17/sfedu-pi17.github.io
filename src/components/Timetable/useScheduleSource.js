@@ -9,7 +9,7 @@ import { useScheduleStatus } from '@/hooks/useScheduleStatus.js';
 // загрузки/ошибки и уведомлением об изменениях. Навигация по неделям/дням (weekOffset,
 // selectedDay) и режим просмотра diff (isReviewing) остаются в компоненте — это про показ,
 // а не про данные; commitChanges — их завершающий шаг («ОК» сохраняет новое расписание).
-// Флаг isRefreshing шлём в контекст, чтобы шапка крутила лоадер при любом обновлении.
+// Флаг isRefreshing шлём в контекст, чтобы шапка показывала «Соединение…» при любом обновлении.
 export function useScheduleSource() {
   const { setIsRefreshing } = useScheduleStatus();
   const [schedule, setSchedule] = useState(() => loadScheduleCache());
@@ -50,7 +50,7 @@ export function useScheduleSource() {
       .catch((err) => {
         console.error('Ошибка загрузки CSV:', err);
         setError(true);
-        // Офлайн не пугаем тостом — в хедере уже крутится лоадер.
+        // Офлайн не пугаем тостом — в хедере уже показывается «Соединение…».
         if (navigator.onLine) setToastVisible(true);
         setIsRefreshing(false);
       });
