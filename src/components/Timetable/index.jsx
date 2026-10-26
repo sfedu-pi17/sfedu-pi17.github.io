@@ -270,7 +270,7 @@ export default function Timetable() {
             onPointerCancel={onPointerCancel}
           >
             <div
-              className="scheduleTrack"
+              className={`scheduleTrack${!settling && drag.x === 0 ? ' isResting' : ''}${settling ? ' isSettling' : ''}`}
               role="rowgroup"
               onTransitionEnd={onTransitionEnd}
               style={{
