@@ -622,7 +622,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--mantine-color-gray-9) 94%, transparent);
+  /* Тёмно-серый круг, белая стрелка на нём читается. */
+  background: #191919;
   border-radius: 50%;
   color: #fff;
 }

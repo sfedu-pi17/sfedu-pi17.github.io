@@ -1,0 +1,11 @@
+/* «Соединение» не переносим и держим точки с запасом по ширине (под три), чтобы при
+   их появлении/исчезновении заголовок и меню справа не дёргались по горизонтали. */
+.connectingText {
+  white-space: nowrap;
+}
+
+.connectingDots {
+  display: inline-block;
+  min-width: 1.3em;
+  text-align: left;
+}
