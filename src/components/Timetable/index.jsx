@@ -130,6 +130,11 @@ export default function Timetable() {
   // Пара доступна, если на этот день есть запись и она не отменена; пустые и
   // отменённые пропускаем при подсветке, показывая следующую актуальную.
   const isAvailableLecture = (day, num) => {
+    const slot = { week, day, lectureNumber: num };
+    // Физ-ра — посещаемая активность поверх расписания: на такой паре «ходим», даже если
+    // слота нет (пара пустая) или пара исключена («не ходить»), поэтому подсвечиваем её как
+    // текущую/следующую — человек в это время идёт в спортзал.
+    if (gymSel.isGym(slot)) return true;
     const entry = weekDayMap[day][num];
     if (!entry?.discipline) return false;
     if (isCancelledOn(entry.cancelDate, dayDates[day])) return false;

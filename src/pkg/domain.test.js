@@ -180,6 +180,14 @@ describe('getLectureTimeState', () => {
   it('когда после недоступной пары нет других доступных -> null', () => {
     expect(getLectureTimeState(at('10:00'), (n) => n === 1)).toBeNull();
   });
+
+  it('физ-ра делает пару доступной: подсвечивается как идущая, а не следующая', () => {
+    // время 4-й пары (13:45–15:20), физ-ра стоит на ней — пара доступна, поэтому
+    // подсвечиваем именно её, а не «проскакиваем» на следующую
+    expect(getLectureTimeState(at('14:00'), (n) => n === 4)).toEqual({ num: 4, status: 'ongoing' });
+    // перемена после 3-й (13:30), физ-ра на 4-й ещё не началась -> upcoming
+    expect(getLectureTimeState(at('13:30'), (n) => n === 4)).toEqual({ num: 4, status: 'upcoming' });
+  });
 });
 
 describe('getMinutesRemaining', () => {
